@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>THE GENTLEMEN'S ARCHIVE | International Men's Day 2026</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pearl: '#FAF8FA',
+            blush: '#F3DCE6',
+            dustyRose: '#E8C3D2',
+            powderBlue: '#DCE7F3',
+            iceBlue: '#C8D9EB',
+            champagne: '#D9C49B',
+            navy: '#303B52',
+            softGrey: '#85838C',
+            deepPink: '#8B4468',
+            quizPink: '#F5B9E8',
+            quizBlue: '#55A6D2',
+            quizDeepBlue: '#347FAF',
+            quizPowder: '#D9EDFF',
+            quizYellow: '#F5D36E'
+          },
+          fontFamily: {
+            editorial: ['Playfair Display', 'serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif']
+          },
+          boxShadow: {
+            card: '0 20px 40px -15px rgba(48, 59, 82, 0.08)',
+            button: '0 8px 20px -5px rgba(139, 68, 104, 0.25)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & Babel CDNs -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Canvas Confetti & html2canvas -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    body {
+      background-color: #DCE7F3;
+      color: #303B52;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+    }
+    
+    .floating-icon {
+      position: fixed;
+      pointer-events: none;
+      z-index: 50;
+      animation: floatDown 6s linear forwards;
+    }
+
+    @keyframes floatDown {
+      0% {
+        transform: translateY(-50px) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(105vh) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    /* Envelope styling */
+    .envelope-wrapper {
+      perspective: 1000px;
+    }
+    .envelope {
+      transform-style: preserve-3d;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .envelope.open {
+      transform: rotateX(180deg);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Helper to normalize Vietnamese text
+    const normalizeText = (str) => {
+      if (!str) return '';
+      return str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, 'd')
+        .trim();
+    };
+
+    // Initial Recipients list updated to the 6 exact names requested
+    const INITIAL_RECIPIENTS = [
+      {
+        id: 'rec_01',
+        fullName: 'Cao Hoàng Nhật Minh',
+        group: 'GENTLEMAN',
+        personality: 'THE GOLDEN GENTLEMAN',
+        secretMessage: 'Mong rằng Nhật Minh luôn giữ vững bản lĩnh và đạt được nhiều thành công rực rỡ trong năm 2026 nhé!',
+        photos: [
+          { url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop', caption: 'Khoảnh khắc rạng rỡ của Nhật Minh', fit: 'cover', position: 'center' },
+          { url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&auto=format&fit=crop', caption: 'Phong thái đỉnh cao trong ngày hội', fit: 'cover', position: 'center' }
+        ]
+      },
+      {
+        id: 'rec_02',
+        fullName: 'Thái Minh Đạt',
+        group: 'GENTLEMAN',
+        personality: 'THE DEADLINE SURVIVOR',
+        secretMessage: 'Chúc Minh Đạt luôn làm chủ mọi deadline và có một hành trình học tập thật thuận lợi!',
+        photos: [
+          { url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=500&auto=format&fit=crop', caption: 'Thái Minh Đạt cùng nụ cười quen thuộc', fit: 'cover', position: 'center' },
+          { url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=500&auto=format&fit=crop', caption: 'Góc nghiêng thần thánh', fit: 'cover', position: 'center' }
+        ]
+      },
+      {
+        id: 'rec_03',
+        fullName: 'Đỗ Văn Dương',
+        group: 'GENTLEMAN',
+        personality: 'THE SILENT CHARMER',
+        secretMessage: 'Gửi Văn Dương: Sự điềm tĩnh và tận tâm của bạn luôn là điểm tựa tuyệt vời cho mọi người!',
+        photos: [
+          { url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=500&auto=format&fit=crop', caption: 'Đỗ Văn Dương điềm tĩnh và phong cách', fit: 'cover', position: 'center' },
+          { url: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=500&auto=format&fit=crop', caption: 'Giờ nghỉ giải lao đáng nhớ', fit: 'cover', position: 'center' }
+        ]
+      },
+      {
+        id: 'rec_04',
+        fullName: 'Đồng Hoàng Dũng',
+        group: 'GENTLEMAN',
+        personality: 'THE CHAOS MANAGER',
+        secretMessage: 'Chúc Hoàng Dũng luôn giữ vững nguồn năng lượng tích cực và điều hành mọi việc cực mượt!',
+        photos: [
+          { url: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=500&auto=format&fit=crop', caption: 'Hoàng Dũng với tinh thần tích cực', fit: 'cover', position: 'center' },
+          { url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500&auto=format&fit=crop', caption: 'Kỷ niệm đẹp cùng tập thể', fit: 'cover', position: 'center' }
+        ]
+      },
+      {
+        id: 'rec_05',
+        fullName: 'Nguyễn Trọng Khôi',
+        group: 'GENTLEMAN',
+        personality: 'THE SUNSHINE GUY',
+        secretMessage: 'Gửi Trọng Khôi: Nụ cười rạng rỡ của bạn luôn đem lại niềm vui cho cả nhóm!',
+        photos: [
+          { url: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=500&auto=format&fit=crop', caption: 'Trọng Khôi tràn đầy năng lượng', fit: 'cover', position: 'center' },
+          { url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500&auto=format&fit=crop', caption: 'Khoảnh khắc đáng nhớ', fit: 'cover', position: 'center' }
+        ]
+      },
+      {
+        id: 'rec_06',
+        fullName: 'Phạm Đình Hà Khánh',
+        group: 'GENTLEMAN',
+        personality: 'THE HIDDEN MVP',
+        secretMessage: 'Chúc Hà Khánh luôn tự tin, bứt phá và chinh phục được những đỉnh cao mới!',
+        photos: [
+          { url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop', caption: 'Hà Khánh nhiệt huyết và bản lĩnh', fit: 'cover', position: 'center' },
+          { url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop', caption: 'Tự tin và phong cách', fit: 'cover', position: 'center' }
+        ]
+      }
+    ];
+
+    const DEFAULT_SHARED_PHOTOS = [
+      { url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop', caption: 'Kỷ niệm tập thể đáng nhớ ngày 19/11', fit: 'cover', position: 'center' },
+      { url: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&auto=format&fit=crop', caption: 'Đồng hành và gắn kết cùng Chị Em Phong Trào', fit: 'cover', position: 'center' }
+    ];
+
+    const DEFAULT_GLOBAL_LETTER = `Dear [Recipient Name],
+
+Chúc mừng ngày Quốc tế Đàn ông 19/11!
+Hôm nay là ngày dành riêng cho các anh em, nên xin phép được tạm gác những deadline, những chiếc task chưa hoàn thành và cả những lần mất tích đúng lúc cần người hỗ trợ... để gửi đến bạn một lời chúc thật đặc biệt!
+
+Chúc bạn luôn đẹp trai theo cách của riêng mình, tự tin trong mọi hành trình, học tập và làm việc thật thuận lợi. Mong rằng ví luôn đủ dày, deadline luôn biết điều, cuộc sống ít drama và mọi kế hoạch đều chạy mượt như cách bạn mong muốn.
+
+Cảm ơn vì đã là một mảnh ghép đáng quý của tập thể. Chúc bạn luôn nhiệt huyết, bản lĩnh và chinh phục được những mục tiêu lớn hơn.
+
+Stay awesome, stay confident, and keep being you!
+
+With appreciation,
+CHỊ EM PHONG TRÀO.`;
+
+    const QUIZ_QUESTIONS = [
+      {
+        id: 1,
+        question: "Khi đối mặt với deadline bất ngờ vào cuối tuần, bạn sẽ...?",
+        options: [
+          { text: "Bình tĩnh lập kế hoạch và xử lý gọn gàng từng việc.", points: "GOLDEN" },
+          { text: "Uống liền 2 ly cà phê và bật chế độ siêu tốc độ!", points: "SURVIVOR" },
+          { text: "Lặng lẽ hoàn thành xuất sắc mà không cần phô trương.", points: "SILENT" },
+          { text: "Điều phối và chia bớt việc cho đồng đội cùng làm.", points: "CHAOS" }
+        ]
+      },
+      {
+        id: 2,
+        question: "Trong một buổi họp hoặc làm việc nhóm, bạn thường là người...?",
+        options: [
+          { text: "Đưa ra các ý tưởng đột phá và định hướng chung.", points: "GOLDEN" },
+          { text: "Luôn tạo không khí vui vẻ, thoải mái cho mọi người.", points: "SUNSHINE" },
+          { text: "Âm thầm gánh phần việc khó nhất dự án.", points: "MVP" },
+          { text: "Gắn kết các thành viên và giải quyết mọi phát sinh.", points: "CHAOS" }
+        ]
+      },
+      {
+        id: 3,
+        question: "Món quà bạn mong đợi nhất trong ngày International Men's Day?",
+        options: [
+          { text: "Một lời chúc chân thành từ tập thể.", points: "SUNSHINE" },
+          { text: "Thẻ xanh miễn deadline 1 tuần!", points: "SURVIVOR" },
+          { text: "Sự công nhận cho những đóng góp âm thầm.", points: "MVP" },
+          { text: "Một buổi hẹn cà phê thư giãn cùng các bạn.", points: "SILENT" }
+        ]
+      },
+      {
+        id: 4,
+        question: "Siêu năng lực của bạn trong mắt bạn bè là gì?",
+        options: [
+          { text: "Điềm tĩnh trước mọi biến cố cuộc sống.", points: "SILENT" },
+          { text: "Luôn có mặt đúng lúc khi đồng đội cần giúp đỡ.", points: "MVP" },
+          { text: "Tỏa ra năng lượng tích cực khiến ai cũng mỉm cười.", points: "SUNSHINE" },
+          { text: "Luôn hoàn thành xuất sắc nhiệm vụ được giao.", points: "GOLDEN" }
+        ]
+      }
+    ];
+
+    // Main App Component
+    function App() {
+      const [step, setStep] = useState(1);
+      const [recipients, setRecipients] = useState(() => {
+        const saved = localStorage.getItem('ga_recipients');
+        return saved ? JSON.parse(saved) : INITIAL_RECIPIENTS;
+      });
+
+      const [sharedPhotos, setSharedPhotos] = useState(() => {
+        const saved = localStorage.getItem('ga_shared_photos');
+        return saved ? JSON.parse(saved) : DEFAULT_SHARED_PHOTOS;
+      });
+
+      const [globalLetter, setGlobalLetter] = useState(() => {
+        return localStorage.getItem('ga_global_letter') || DEFAULT_GLOBAL_LETTER;
+      });
+
+      // Background Music URL state
+      const [musicUrl, setMusicUrl] = useState(() => {
+        return localStorage.getItem('ga_music_url') || 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3';
+      });
+
+      const [activeRecipient, setActiveRecipient] = useState(null);
+      const [nameInput, setNameInput] = useState('');
+      const [duplicateMatches, setDuplicateMatches] = useState([]);
+      const [errorMessage, setErrorMessage] = useState('');
+
+      // Audio Player state
+      const [isPlaying, setIsPlaying] = useState(false);
+      const audioRef = useRef(null);
+
+      // Floating Icons state
+      const [floatingIcons, setFloatingIcons] = useState([]);
+
+      // Admin Modal State
+      const [showAdmin, setShowAdmin] = useState(false);
+      const [adminAuthed, setAdminAuthed] = useState(false);
+      const [adminPasswordInput, setAdminPasswordInput] = useState('');
+      const [adminPassword, setAdminPassword] = useState(() => {
+        return localStorage.getItem('ga_admin_pw') || 'gentlemen2026';
+      });
+
+      // Thank you messages storage
+      const [thankYouList, setThankYouList] = useState(() => {
+        const saved = localStorage.getItem('ga_thank_yous');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      useEffect(() => {
+        localStorage.setItem('ga_recipients', JSON.stringify(recipients));
+      }, [recipients]);
+
+      useEffect(() => {
+        localStorage.setItem('ga_shared_photos', JSON.stringify(sharedPhotos));
+      }, [sharedPhotos]);
+
+      useEffect(() => {
+        localStorage.setItem('ga_global_letter', globalLetter);
+      }, [globalLetter]);
+
+      useEffect(() => {
+        localStorage.setItem('ga_music_url', musicUrl);
+      }, [musicUrl]);
+
+      useEffect(() => {
+        localStorage.setItem('ga_thank_yous', JSON.stringify(thankYouList));
+      }, [thankYouList]);
+
+      const trigger5CriteriaEffect = () => {
+        const icons = ['🌟', '🏃', '📚', '🌐', '🤝'];
+        const newFloating = [];
+        for (let i = 0; i < 25; i++) {
+          newFloating.push({
+            id: Date.now() + i,
+            icon: icons[Math.floor(Math.random() * icons.length)],
+            left: Math.random() * 90 + 5,
+            delay: Math.random() * 3,
+            duration: 4 + Math.random() * 3
+          });
+        }
+        setFloatingIcons(newFloating);
+        
+        // Also fire canvas confetti
+        if (window.confetti) {
+          window.confetti({
+            particleCount: 80,
+            spread: 70,
+            origin: { y: 0.8 }
+          });
+        }
+      };
+
+      const handleNameSubmit = (e) => {
+        e.preventDefault();
+        setErrorMessage('');
+        setDuplicateMatches([]);
+
+        const norm = normalizeText(nameInput);
+        if (!norm) {
+          setErrorMessage('Vui lòng nhập họ và tên của bạn.');
+          return;
+        }
+
+        const matches = recipients.filter(r => normalizeText(r.fullName) === norm);
+        if (matches.length === 0) {
+          setErrorMessage('Không tìm thấy tên trong danh sách. Vui lòng kiểm tra lại!');
+        } else if (matches.length === 1) {
+          setActiveRecipient(matches[0]);
+          setStep(2); // Go to quiz
+        } else {
+          setDuplicateMatches(matches);
+        }
+      };
+
+      const handleSelectDuplicate = (rec) => {
+        setActiveRecipient(rec);
+        setDuplicateMatches([]);
+        setStep(2);
+      };
+
+      const toggleMusic = () => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+          audioRef.current.pause();
+          setIsPlaying(false);
+        } else {
+          audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-powderBlue text-navy flex flex-col justify-between relative selection:bg-blush selection:text-deepPink">
+          {/* Background Audio */}
+          <audio ref={audioRef} loop src={musicUrl} />
+
+          {/* Floating 5-Criteria Icons Effect */}
+          {floatingIcons.map((item) => (
+            <div
+              key={item.id}
+              className="floating-icon text-2xl select-none"
+              style={{
+                left: `${item.left}%`,
+                animationDelay: `${item.delay}s`,
+                animationDuration: `${item.duration}s`
+              }}
+            >
+              {item.icon}
+            </div>
+          ))}
+
+          {/* Header Controls */}
+          <header className="p-4 sm:p-6 flex justify-between items-center max-w-4xl mx-auto w-full z-10">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-deepPink animate-pulse"></span>
+              <span className="font-editorial font-bold text-sm sm:text-base text-deepPink tracking-wider uppercase">
+                THE GENTLEMEN'S ARCHIVE
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleMusic}
+                className="px-3.5 py-2 rounded-full bg-blush border border-dustyRose text-deepPink text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-dustyRose/50 transition active:scale-95"
+              >
+                <span>{isPlaying ? '🔊 MUSIC ON' : '🔇 MUSIC OFF'}</span>
+              </button>
+
+              <button
+                onClick={() => setShowAdmin(true)}
+                className="px-3.5 py-2 rounded-full bg-pearl border border-dustyRose text-navy text-xs font-bold hover:bg-dustyRose/40 transition active:scale-95"
+              >
+                🔑 ADMIN HUB
+              </button>
+            </div>
+          </header>
+
+          {/* Main Flow Container */}
+          <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 sm:py-8 flex flex-col justify-center z-10">
+            {step === 1 && (
+              <NameInputStep
+                nameInput={nameInput}
+                setNameInput={setNameInput}
+                handleNameSubmit={handleNameSubmit}
+                errorMessage={errorMessage}
+                duplicateMatches={duplicateMatches}
+                handleSelectDuplicate={handleSelectDuplicate}
+              />
+            )}
+
+            {step === 2 && (
+              <QuizStep
+                activeRecipient={activeRecipient}
+                onComplete={() => setStep(3)}
+              />
+            )}
+
+            {step === 3 && (
+              <PersonalityResultStep
+                activeRecipient={activeRecipient}
+                onNext={() => setStep(4)}
+              />
+            )}
+
+            {step === 4 && (
+              <EnvelopeStep
+                activeRecipient={activeRecipient}
+                onOpen={() => setStep(5)}
+              />
+            )}
+
+            {step === 5 && (
+              <PersonalPhotosStep
+                activeRecipient={activeRecipient}
+                onNext={() => setStep(6)}
+              />
+            )}
+
+            {step === 6 && (
+              <SharedPhotosStep
+                sharedPhotos={sharedPhotos}
+                onNext={() => setStep(7)}
+              />
+            )}
+
+            {step === 7 && (
+              <LetterStep
+                activeRecipient={activeRecipient}
+                globalLetter={globalLetter}
+                onNext={() => setStep(8)}
+              />
+            )}
+
+            {step === 8 && (
+              <SecretMessageStep
+                activeRecipient={activeRecipient}
+                onNext={() => setStep(9)}
+              />
+            )}
+
+            {step === 9 && (
+              <ThankYouStep
+                activeRecipient={activeRecipient}
+                thankYouList={thankYouList}
+                setThankYouList={setThankYouList}
+                onNext={() => setStep(10)}
+              />
+            )}
+
+            {step === 10 && (
+              <FinalCelebrationStep
+                activeRecipient={activeRecipient}
+                trigger5CriteriaEffect={trigger5CriteriaEffect}
+                onRestart={() => {
+                  setStep(1);
+                  setNameInput('');
+                  setActiveRecipient(null);
+                }}
+              />
+            )}
+          </main>
+
+          {/* Footer */}
+          <footer className="p-4 text-center text-[11px] text-navy/70 font-semibold border-t border-dustyRose/60 bg-powderBlue/80 backdrop-blur-sm z-10">
+            <p>CHỊ EM PHONG TRÀO © 2026 • INTERNATIONAL MEN'S DAY DIGITAL GIFT</p>
+          </footer>
+
+          {/* Admin Dashboard Modal */}
+          {showAdmin && (
+            <AdminModal
+              adminAuthed={adminAuthed}
+              setAdminAuthed={setAdminAuthed}
+              adminPasswordInput={adminPasswordInput}
+              setAdminPasswordInput={setAdminPasswordInput}
+              adminPassword={adminPassword}
+              setAdminPassword={setAdminPassword}
+              onClose={() => setShowAdmin(false)}
+              recipients={recipients}
+              setRecipients={setRecipients}
+              sharedPhotos={sharedPhotos}
+              setSharedPhotos={setSharedPhotos}
+              globalLetter={globalLetter}
+              setGlobalLetter={setGlobalLetter}
+              musicUrl={musicUrl}
+              setMusicUrl={setMusicUrl}
+              thankYouList={thankYouList}
+              setThankYouList={setThankYouList}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // STEP 1: NAME INPUT STEP
+    function NameInputStep({ nameInput, setNameInput, handleNameSubmit, errorMessage, duplicateMatches, handleSelectDuplicate }) {
+      return (
+        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
+              WELCOME GENTLEMEN
+            </span>
+            <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-deepPink">
+              HELLO, GENTLEMAN!
+            </h1>
+            <p className="text-xs sm:text-sm text-navy font-semibold">
+              Before we begin, tell us your full name.
+            </p>
+          </div>
+
+          <form onSubmit={handleNameSubmit} className="space-y-4 max-w-md mx-auto">
+            <div>
+              <input
+                type="text"
+                placeholder="Enter your full name..."
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                className="w-full p-4 rounded-2xl bg-pearl border-2 border-dustyRose text-center font-bold text-navy focus:outline-none focus:border-deepPink transition shadow-inner placeholder:text-softGrey text-sm sm:text-base"
+              />
+            </div>
+
+            {errorMessage && (
+              <p className="text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                {errorMessage}
+              </p>
+            )}
+
+            {duplicateMatches.length > 0 && (
+              <div className="bg-pearl p-4 rounded-2xl border border-dustyRose text-left space-y-2">
+                <p className="text-xs font-bold text-deepPink">Tìm thấy nhiều tài khoản trùng tên. Vui lòng chọn đúng bạn:</p>
+                <div className="space-y-1">
+                  {duplicateMatches.map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => handleSelectDuplicate(m)}
+                      className="w-full p-2.5 rounded-xl bg-blush/40 hover:bg-blush text-xs font-bold text-navy flex justify-between items-center transition"
+                    >
+                      <span>{m.fullName}</span>
+                      <span className="text-[10px] bg-pearl px-2 py-0.5 rounded border border-dustyRose">{m.group || 'GENTLEMAN'}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs sm:text-sm tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
+            >
+              LET'S GO! 🚀
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    // STEP 2: QUIZ STEP
+    function QuizStep({ activeRecipient, onComplete }) {
+      const [currentQ, setCurrentQ] = useState(0);
+
+      const handleSelectOption = () => {
+        if (currentQ < QUIZ_QUESTIONS.length - 1) {
+          setCurrentQ(currentQ + 1);
+        } else {
+          onComplete();
+        }
+      };
+
+      const q = QUIZ_QUESTIONS[currentQ];
+
+      return (
+        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
+          <div className="flex justify-between items-center text-xs font-bold text-deepPink border-b border-dustyRose pb-3">
+            <span>PERSONAL QUIZ FOR {activeRecipient?.fullName?.toUpperCase()}</span>
+            <span>QUESTION {currentQ + 1} / {QUIZ_QUESTIONS.length}</span>
+          </div>
+
+          <div className="w-full bg-pearl h-2 rounded-full overflow-hidden border border-dustyRose">
+            <div
+              className="bg-deepPink h-full transition-all duration-300"
+              style={{ width: `${((currentQ + 1) / QUIZ_QUESTIONS.length) * 100}%` }}
+            />
+          </div>
+
+          <h2 className="font-editorial text-xl sm:text-2xl font-bold text-deepPink leading-snug">
+            {q.question}
+          </h2>
+
+          <div className="space-y-3">
+            {q.options.map((opt, idx) => (
+              <button
+                key={idx}
+                onClick={handleSelectOption}
+                className="w-full p-4 rounded-2xl bg-pearl hover:bg-dustyRose/40 border border-dustyRose text-left font-semibold text-xs sm:text-sm text-navy transition shadow-sm transform active:scale-[0.99] flex items-center gap-3"
+              >
+                <span className="w-6 h-6 rounded-full bg-blush text-deepPink font-bold flex items-center justify-center text-xs border border-dustyRose shrink-0">
+                  {String.fromCharCode(65 + idx)}
+                </span>
+                <span>{opt.text}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // STEP 3: PERSONALITY RESULT
+    function PersonalityResultStep({ activeRecipient, onNext }) {
+      return (
+        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
+          <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
+            QUIZ RESULT
+          </span>
+
+          <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-deepPink">
+            YOUR PERSONALITY ARCHETYPE
+          </h2>
+
+          <div className="p-6 bg-pearl rounded-2xl border-2 border-dustyRose space-y-3 shadow-inner">
+            <h3 className="font-editorial text-xl font-bold text-deepPink uppercase">
+              {activeRecipient?.personality || 'THE GOLDEN GENTLEMAN'}
+            </h3>
+            <p className="text-xs sm:text-sm text-navy font-medium leading-relaxed">
+              Bạn luôn tỏa ra phong thái bản lĩnh, chu đáo và đem lại cảm giác tin tưởng tuyệt đối cho những người xung quanh!
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-navy uppercase tracking-wider">
+              CONGRATULATIONS, {activeRecipient?.fullName}! YOUR LETTER IS READY!
+            </p>
+            <button
+              onClick={onNext}
+              className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs sm:text-sm tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
+            >
+              OPEN MY LETTER ✉️
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // STEP 4: ENVELOPE STEP
+    function EnvelopeStep({ activeRecipient, onOpen }) {
+      const [isOpen, setIsOpen] = useState(false);
+
+      const handleOpen = () => {
+        setIsOpen(true);
+        setTimeout(() => {
+          onOpen();
+        }, 800);
+      };
+
+      return (
+        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
+          <h2 className="font-editorial text-2xl font-bold text-deepPink">
+            A SPECIAL LETTER FOR YOU
+          </h2>
+
+          <div className="envelope-wrapper py-6">
+            <div className={`envelope w-48 h-36 mx-auto bg-pearl rounded-2xl border-2 border-dustyRose shadow-xl flex items-center justify-center relative cursor-pointer ${isOpen ? 'open' : ''}`} onClick={handleOpen}>
+              <span className="text-4xl">💌</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleOpen}
+            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
+          >
+            CLICK TO OPEN ENVELOPE ✨
+          </button>
+        </div>
+      );
+    }
+
+    // STEP 5: PERSONAL PHOTOS (WITH FRAME FIT & POSITION SUPPORT)
+    function PersonalPhotosStep({ activeRecipient, onNext }) {
+      const photos = activeRecipient?.photos || [];
+      const photo1 = photos[0] || { url: '', caption: 'Ảnh cá nhân 01', fit: 'cover', position: 'center' };
+      const photo2 = photos[1] || { url: '', caption: 'Ảnh cá nhân 02', fit: 'cover', position: 'center' };
+
+      return (
+        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
+          <div className="text-center space-y-2">
+            <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
+              PERSONAL GALLERY
+            </span>
+            <h2 className="font-editorial text-2xl font-bold text-deepPink">
+              HEY, {activeRecipient?.fullName.toUpperCase()}!
+            </h2>
+            <p className="text-xs text-navy font-semibold">Today, you're the main character.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-pearl border border-dustyRose p-3 rounded-2xl space-y-2 shadow-sm">
+              <div className="aspect-square w-full rounded-xl overflow-hidden bg-powderBlue flex items-center justify-center">
+                {photo1.url ? (
+                  <img
+                    src={photo1.url}
+                    alt="Personal 1"
+                    className="w-full h-full"
+                    style={{ objectFit: photo1.fit || 'cover', objectPosition: photo1.position || 'center' }}
+                  />
+                ) : (
+                  <span className="text-xs font-bold text-deepPink">Personal Photo 01 Placeholder</span>
+                )}
+              </div>
+              <p className="text-[11px] font-medium text-navy text-center line-clamp-2">
+                {photo1.caption || 'Kỷ niệm cá nhân 01'}
+              </p>
+            </div>
+
+            <div className="bg-pearl border border-dustyRose p-3 rounded-2xl space-y-2 shadow-sm">
+              <div className="aspect-square w-full rounded-xl overflow-hidden bg-powderBlue flex items-center justify-center">
+                {photo2.url ? (
+                  <img
+                    src={photo2.url}
+                    alt="Personal 2"
+                    className="w-full h-full"
+                    style={{ objectFit: photo2.fit || 'cover', objectPosition: photo2.position || 'center' }}
+                  />
+                ) : (
+                  <span className="text-xs font-bold text-deepPink">Personal Photo 02 Placeholder</span>
+                )}
+              </div>
+              <p className="text-[11px] font-medium text-navy text-center line-clamp-2">
+                {photo2.caption || 'Kỷ niệm cá nhân 02'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onNext}
+            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
+          >
+            CONTINUE TO GROUP MEMORIES ➡️
+          </button>
+        </div>
+      );
+    }
+
+    // STEP 6: SHARED GROUP PHOTOS (EXACTLY 2 PHOTOS FOR EVERYONE WITH FRAME FIT)
+    function SharedPhotosStep({ sharedPhotos, onNext }) {
+      const photo1 = sharedPhotos[0] || { url: '', caption: 'Ảnh tập thể 01', fit: 'cover', position: 'center' };
+      const photo2 = sharedPhotos[1] || { url: '', caption: 'Ảnh tập thể 02', fit: 'cover', position: 'center' };
+
+      return (
+        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
+          <div className="text-center space-y-2">
+            <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
+              SHARED MEMORIES
+            </span>
+            <h2 className="font-editorial text-2xl font-bold text-deepPink">
+              GOOD TIMES, GREAT PEOPLE.
+            </h2>
+            <p className="text-xs text-navy font-semibold">Những khoảnh khắc đẹp gắn kết cả tập thể.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-pearl border border-dustyRose p-3 rounded-2xl space-y-2 shadow-sm">
+              <div className="aspect-square w-full rounded-xl overflow-hidden bg-powderBlue flex items-center justify-center">
+                {photo1.url ? (
+                  <img
+                    src={photo1.url}
+                    alt="Group 1"
+                    className="w-full h-full"
+                    style={{ objectFit: photo1.fit || 'cover', objectPosition: photo1.position || 'center' }}
+                  />
+                ) : (
+                  <span className="text-xs font-bold text-deepPink">Group Photo 01</span>
+                )}
+              </div>
+              <p className="text-[11px] font-medium text-navy text-center line-clamp-2">
+                {photo1.caption}
+              </p>
+            </div>
+
+            <div className="bg-pearl border border-dustyRose p-3 rounded-2xl space-y-2 shadow-sm">
+              <div className="aspect-square w-full rounded-xl overflow-hidden bg-powderBlue flex items-center justify-center">
+                {photo2.url ? (
+                  <img
+                    src={photo2.url}
+                    alt="Group 2"
+                    className="w-full h-full"
+                    style={{ objectFit: photo2.fit || 'cover', objectPosition: photo2.position || 'center' }}
+                  />
+                ) : (
+                  <span className="text-xs font-bold text-deepPink">Group Photo 02</span>
+                )}
+              </div>
+              <p className="text-[11px] font-medium text-navy text-center line-clamp-2">
+                {photo2.caption}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onNext}
+            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
+          >
+            READ YOUR LETTER ✉️
+          </button>
+        </div>
+      );
+    }
+
+    // STEP 7: LETTER STEP WITH DYNAMIC RECIPIENT REPLACEMENT
+    function LetterStep({ activeRecipient, globalLetter, onNext }) {
+      const fullLetter = globalLetter.replace(/\[Recipient Name\]/g, activeRecipient?.fullName || 'Gentleman');
+
+      const [displayedText, setDisplayedText] = useState('');
+      const [isDone, setIsDone] = useState(false);
+
+      useEffect(() => {
+        let idx = 0;
+        const timer = setInterval(() => {
+          if (idx < fullLetter.length) {
+            setDisplayedText(fullLetter.slice(0, idx + 1));
+            idx++;
+          } else {
+            setIsDone(true);
+            clearInterval(timer);
+          }
+        }, 15);
+
+        return () => clearInterval(timer);
+      }, [fullLetter]);
+
+      const handleSkip = () => {
+        setDisplayedText(fullLetter);
+        setIsDone(true);
+      };
+
+      return (
+        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
+          <div className="flex justify-between items-center border-b border-dustyRose pb-4">
+            <h2 className="font-editorial text-xl font-bold text-deepPink">
+              JUST A LITTLE NOTE FOR YOU
+            </h2>
+            {!isDone && (
+              <button
+                onClick={handleSkip}
+                className="text-[11px] font-bold text-deepPink underline hover:opacity-80"
+              >
+                Bỏ qua hiệu ứng ⏩
+              </button>
+            )}
+          </div>
+
+          <div className="bg-pearl border border-dustyRose p-6 rounded-2xl text-xs sm:text-sm font-medium text-navy leading-relaxed whitespace-pre-line shadow-inner max-h-[350px] overflow-y-auto">
+            {displayedText}
+          </div>
+
+          <button
+            onClick={onNext}
+            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
+          >
+            DISCOVER SECRET MESSAGE 🤫
+          </button>
+        </div>
+      );
+    }
+
+    // STEP 8: SECRET MESSAGE (NOW INDIVIDUAL PER RECIPIENT)
+    function SecretMessageStep({ activeRecipient, onNext }) {
+      const message = activeRecipient?.secretMessage || 'Đừng quên rằng phía sau bạn luôn có sự ủng hộ nhiệt tình từ các chị em phong trào. Bất kể khi nào bạn cần sự hỗ trợ hoặc một nguồn năng lượng tích cực, bọn mình luôn ở đây!';
+
+      return (
+        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
+          <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
+            SURPRISE NOTE FOR {activeRecipient?.fullName?.toUpperCase()}
+          </span>
+
+          <h2 className="font-editorial text-2xl font-bold text-deepPink">
+            PSST... ONE MORE THING!
+          </h2>
+
+          <div className="p-6 bg-pearl border border-dustyRose rounded-2xl space-y-3 text-xs sm:text-sm leading-relaxed text-navy font-medium shadow-sm">
+            <p className="italic">
+              "{message}"
+            </p>
+          </div>
+
+          <button
+            onClick={onNext}
+            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
+          >
+            SEND A THANK YOU 💌
+          </button>
+        </div>
+      );
+    }
+
+    // STEP 9: A LITTLE THANK YOU
+    function ThankYouStep({ activeRecipient, thankYouList, setThankYouList, onNext }) {
+      const [message, setMessage] = useState('');
+      const [isAnonymous, setIsAnonymous] = useState(false);
+      const [sent, setSent] = useState(false);
+
+      const handleSend = (e) => {
+        e.preventDefault();
+        if (!message.trim()) return;
+
+        const newMsg = {
+          id: Date.now(),
+          senderName: isAnonymous ? 'Ẩn danh' : (activeRecipient?.fullName || 'Gentleman'),
+          recipientId: activeRecipient?.id,
+          message: message.trim(),
+          timestamp: new Date().toLocaleString('vi-VN')
+        };
+
+        setThankYouList([newMsg, ...thankYouList]);
+        setSent(true);
+      };
+
+      return (
+        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="font-editorial text-2xl font-bold text-deepPink">
+              A LITTLE THANK YOU
+            </h2>
+            <p className="text-xs text-navy font-semibold">BEFORE YOU GO...</p>
+            <p className="text-xs text-navy/80 leading-relaxed">
+              Đằng sau món quà nhỏ này là rất nhiều sự chuẩn bị từ các chị em phong trào. Hãy để lại một lời nhắn nhỏ nhé!
+            </p>
+          </div>
+
+          {!sent ? (
+            <form onSubmit={handleSend} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-deepPink uppercase mb-1">Tên người gửi</label>
+                <input
+                  type="text"
+                  disabled
+                  value={isAnonymous ? 'Ẩn danh' : (activeRecipient?.fullName || '')}
+                  className="w-full p-3 rounded-xl bg-pearl border border-dustyRose text-xs font-bold text-navy opacity-80"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-deepPink uppercase mb-1">Lời nhắn gửi</label>
+                <textarea
+                  rows="4"
+                  placeholder="Nhập lời cảm ơn hoặc nhắn gửi..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-pearl border border-dustyRose text-xs font-medium text-navy focus:outline-none focus:border-deepPink"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="anon"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="rounded text-deepPink focus:ring-deepPink"
+                />
+                <label htmlFor="anon" className="text-xs text-navy font-medium cursor-pointer">
+                  Gửi dưới dạng ẩn danh
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!message.trim()}
+                className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition disabled:opacity-50 transform active:scale-95"
+              >
+                SEND WITH LOVE 💖
+              </button>
+            </form>
+          ) : (
+            <div className="text-center space-y-4 py-4">
+              <span className="text-4xl block">✨</span>
+              <p className="text-xs font-bold text-deepPink">
+                Cảm ơn bạn! Lời nhắn đã được gửi thành công đến các chị em.
+              </p>
+              <button
+                onClick={onNext}
+                className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition"
+              >
+                GO TO FINAL CELEBRATION 🎉
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // STEP 10: FINAL CELEBRATION & MEMORY CARD PNG EXPORT (1080x1350px FIXED)
+    function FinalCelebrationStep({ activeRecipient, trigger5CriteriaEffect, onRestart }) {
+      const cardRef = useRef(null);
+      const [exporting, setExporting] = useState(false);
+
+      const handleDownloadPNG = () => {
+        if (!cardRef.current) return;
+        setExporting(true);
+
+        window.html2canvas(cardRef.current, {
+          scale: 2, // High resolution
+          useCORS: true,
+          backgroundColor: '#DCE7F3'
+        }).then(canvas => {
+          const link = document.createElement('a');
+          link.download = `Memory_Card_${normalizeText(activeRecipient?.fullName || 'Gentleman')}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          setExporting(false);
+        }).catch(() => {
+          alert('Có lỗi khi xuất ảnh Memory Card. Vui lòng thử lại!');
+          setExporting(false);
+        });
+      };
+
+      const personalPhoto = activeRecipient?.photos?.[0]?.url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop';
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
+            <h1 className="font-editorial text-2xl sm:text-3xl font-bold text-deepPink">
+              HAPPY INTERNATIONAL MEN'S DAY
+            </h1>
+            <p className="text-xs font-bold text-navy tracking-widest">19 NOVEMBER 2026</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <button
+                onClick={trigger5CriteriaEffect}
+                className="py-3 px-4 rounded-xl bg-pearl border border-dustyRose text-deepPink font-bold text-xs hover:bg-dustyRose/40 transition"
+              >
+                🎆 REPLAY CONFETTI & 5 TIÊU CHÍ
+              </button>
+
+              <button
+                onClick={handleDownloadPNG}
+                disabled={exporting}
+                className="py-3 px-4 rounded-xl bg-deepPink text-pearl font-bold text-xs hover:bg-deepPink/90 transition shadow-sm disabled:opacity-50"
+              >
+                {exporting ? 'DOWNLOADING...' : '📸 DOWNLOAD MEMORY CARD (PNG)'}
+              </button>
+            </div>
+
+            <button
+              onClick={onRestart}
+              className="text-xs font-bold text-navy underline hover:opacity-80"
+            >
+              🔄 BACK TO TOP & RE-ENTER NAME
+            </button>
+          </div>
+
+          {/* HIDDEN / OFFSCREEN 1080x1350 MEMORY CARD TARGET FOR PERFECT RATIO */}
+          <div className="overflow-hidden h-0 w-0 pointer-events-none opacity-0">
+            <div
+              ref={cardRef}
+              style={{ width: '1080px', height: '1350px' }}
+              className="bg-powderBlue p-16 flex flex-col justify-between font-sans text-navy relative"
+            >
+              <div className="flex justify-between items-center border-b-2 border-dustyRose pb-8">
+                <div>
+                  <h1 className="font-editorial text-4xl font-bold text-deepPink">THE GENTLEMEN'S ARCHIVE</h1>
+                  <p className="text-lg font-bold text-navy tracking-widest mt-1">INTERNATIONAL MEN'S DAY • 19.11.2026</p>
+                </div>
+                <div className="bg-blush px-6 py-3 rounded-full border border-dustyRose text-deepPink font-bold text-xl">
+                  SPECIAL EDITION
+                </div>
+              </div>
+
+              <div className="flex-1 my-12 flex flex-col items-center justify-center space-y-8 text-center">
+                <div className="w-80 h-80 rounded-3xl overflow-hidden border-4 border-blush shadow-2xl bg-pearl">
+                  <img src={personalPhoto} alt="Memory" className="w-full h-full object-cover" />
+                </div>
+
+                <div>
+                  <h2 className="font-editorial text-5xl font-bold text-deepPink uppercase tracking-wide">
+                    {activeRecipient?.fullName}
+                  </h2>
+                  <p className="text-2xl font-bold text-navy mt-2">
+                    {activeRecipient?.personality || 'THE GOLDEN GENTLEMAN'}
+                  </p>
+                </div>
+
+                <div className="max-w-2xl bg-blush/60 p-8 rounded-3xl border border-dustyRose text-xl leading-relaxed text-navy font-medium">
+                  "Chúc bạn luôn giữ vững phong thái bản lĩnh, gặt hái nhiều thành công và luôn là một mảnh ghép rực rỡ của tập thể!"
+                </div>
+              </div>
+
+              <div className="border-t-2 border-dustyRose pt-8 flex justify-between items-center text-lg font-bold text-navy/70">
+                <span>CHỊ EM PHONG TRÀO</span>
+                <span>SINH VIÊN 5 TỐT • 2026</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ADMIN HUB WITH ENHANCED TABS & GLOBAL LETTER EDITING
+    function AdminModal({
+      adminAuthed,
+      setAdminAuthed,
+      adminPasswordInput,
+      setAdminPasswordInput,
+      adminPassword,
+      setAdminPassword,
+      onClose,
+      recipients,
+      setRecipients,
+      sharedPhotos,
+      setSharedPhotos,
+      globalLetter,
+      setGlobalLetter,
+      musicUrl,
+      setMusicUrl,
+      thankYouList,
+      setThankYouList
+    }) {
+      const [adminTab, setAdminTab] = useState('recipients');
+      const [authError, setAuthError] = useState('');
+
+      const handleLogin = (e) => {
+        e.preventDefault();
+        if (adminPasswordInput === adminPassword) {
+          setAdminAuthed(true);
+          setAuthError('');
+        } else {
+          setAuthError('Mật khẩu Admin không chính xác!');
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-pearl border-2 border-dustyRose rounded-3xl max-w-4xl w-full p-4 sm:p-6 space-y-4 shadow-2xl my-4 max-h-[92vh] flex flex-col">
+            <div className="flex justify-between items-center border-b border-dustyRose pb-3 shrink-0">
+              <div>
+                <h2 className="font-editorial text-xl sm:text-2xl font-bold text-deepPink">ADMIN DASHBOARD</h2>
+                <p className="text-[11px] text-navy font-semibold">Quản trị nội dung, ảnh cá nhân & thư chúc mừng</p>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-full bg-blush text-deepPink hover:bg-dustyRose transition">
+                ✕
+              </button>
+            </div>
+
+            {!adminAuthed ? (
+              <form onSubmit={handleLogin} className="max-w-md mx-auto space-y-4 py-8 w-full">
+                <div className="text-center space-y-2">
+                  <span className="text-3xl block">🔒</span>
+                  <h3 className="font-editorial text-xl font-bold text-deepPink">ADMIN AUTHENTICATION</h3>
+                  <p className="text-xs text-navy">Nhập mật khẩu để truy cập quyền quản trị.</p>
+                </div>
+
+                <input
+                  type="password"
+                  placeholder="Mật khẩu (Mặc định: gentlemen2026)"
+                  value={adminPasswordInput}
+                  onChange={(e) => setAdminPasswordInput(e.target.value)}
+                  className="w-full p-3.5 rounded-xl bg-blush border border-dustyRose text-center text-xs font-bold text-navy focus:outline-none"
+                />
+
+                {authError && <p className="text-xs font-bold text-rose-600 text-center">{authError}</p>}
+
+                <button
+                  type="submit"
+                  className="w-full py-3.5 rounded-xl bg-deepPink text-pearl text-xs font-bold shadow-button hover:bg-deepPink/90 transition"
+                >
+                  UNLOCK ADMIN HUB
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4 overflow-y-auto pr-1 flex-1">
+                {/* Admin Tabs */}
+                <div className="flex flex-wrap gap-2 border-b border-dustyRose pb-3 sticky top-0 bg-pearl z-10 pt-1">
+                  <button
+                    onClick={() => setAdminTab('recipients')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'recipients' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
+                  >
+                    1. NGƯỜI NHẬN & LỜI NHẮN BÍ MẬT
+                  </button>
+
+                  <button
+                    onClick={() => setAdminTab('letter')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'letter' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
+                  >
+                    2. THƯ GỬI CHUNG
+                  </button>
+
+                  <button
+                    onClick={() => setAdminTab('music')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'music' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
+                  >
+                    🎵 NHẠC NỀN
+                  </button>
+
+                  <button
+                    onClick={() => setAdminTab('sharedPhotos')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'sharedPhotos' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
+                  >
+                    3. SHARED GROUP PHOTOS
+                  </button>
+
+                  <button
+                    onClick={() => setAdminTab('thankYous')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'thankYous' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
+                  >
+                    4. THANK YOU INBOX ({thankYouList.length})
+                  </button>
+                </div>
+
+                {/* TAB 1: RECIPIENT INFORMATION, SECRET MESSAGE & PHOTO FRAME ADJUSTMENT */}
+                {adminTab === 'recipients' && (
+                  <AdminRecipientManagement
+                    recipients={recipients}
+                    setRecipients={setRecipients}
+                  />
+                )}
+
+                {/* TAB 2: GLOBAL LETTER MANAGEMENT */}
+                {adminTab === 'letter' && (
+                  <AdminLetterManagement
+                    globalLetter={globalLetter}
+                    setGlobalLetter={setGlobalLetter}
+                  />
+                )}
+
+                {/* TAB MUSIC: BACKGROUND MUSIC URL */}
+                {adminTab === 'music' && (
+                  <AdminMusicManagement
+                    musicUrl={musicUrl}
+                    setMusicUrl={setMusicUrl}
+                  />
+                )}
+
+                {/* TAB 3: SHARED GROUP PHOTOS */}
+                {adminTab === 'sharedPhotos' && (
+                  <AdminSharedPhotosManagement
+                    sharedPhotos={sharedPhotos}
+                    setSharedPhotos={setSharedPhotos}
+                  />
+                )}
+
+                {/* TAB 4: THANK YOU MESSAGES */}
+                {adminTab === 'thankYous' && (
+                  <div className="space-y-4">
+                    <h3 className="font-editorial text-lg font-bold text-deepPink">THANK YOU MESSAGES INBOX</h3>
+                    {thankYouList.length === 0 ? (
+                      <p className="text-xs text-navy/70 italic">Chưa có lời nhắn nào được gửi.</p>
+                    ) : (
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                        {thankYouList.map(item => (
+                          <div key={item.id} className="p-4 rounded-xl bg-blush border border-dustyRose space-y-1 text-xs">
+                            <div className="flex justify-between font-bold text-deepPink">
+                              <span>From: {item.senderName}</span>
+                              <span className="text-[10px] text-navy/60">{item.timestamp}</span>
+                            </div>
+                            <p className="text-navy font-medium">{item.message}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // INDIVIDUAL RECIPIENT INFO, SECRET MESSAGE & PHOTO FIT MANAGEMENT
+    function AdminRecipientManagement({ recipients, setRecipients }) {
+      const [selectedRecId, setSelectedRecId] = useState(recipients[0]?.id || null);
+      const [editingRecipient, setEditingRecipient] = useState(null);
+      const [isDetailsExpanded, setIsDetailsExpanded] = useState(true);
+
+      useEffect(() => {
+        const found = recipients.find(r => r.id === selectedRecId);
+        if (found) {
+          setEditingRecipient(JSON.parse(JSON.stringify(found)));
+        }
+      }, [selectedRecId, recipients]);
+
+      if (!editingRecipient) return null;
+
+      const handlePhotoUpload = (index, file) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target.result;
+          const updatedPhotos = [...(editingRecipient.photos || [])];
+          if (!updatedPhotos[index]) {
+            updatedPhotos[index] = { url: '', caption: '', fit: 'cover', position: 'center' };
+          }
+          updatedPhotos[index].url = dataUrl;
+          setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const handleCaptionChange = (index, caption) => {
+        const updatedPhotos = [...(editingRecipient.photos || [])];
+        if (!updatedPhotos[index]) {
+          updatedPhotos[index] = { url: '', caption: '', fit: 'cover', position: 'center' };
+        }
+        updatedPhotos[index].caption = caption;
+        setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
+      };
+
+      const handlePhotoFitChange = (index, fit) => {
+        const updatedPhotos = [...(editingRecipient.photos || [])];
+        if (!updatedPhotos[index]) updatedPhotos[index] = { url: '', caption: '' };
+        updatedPhotos[index].fit = fit;
+        setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
+      };
+
+      const handlePhotoPositionChange = (index, position) => {
+        const updatedPhotos = [...(editingRecipient.photos || [])];
+        if (!updatedPhotos[index]) updatedPhotos[index] = { url: '', caption: '' };
+        updatedPhotos[index].position = position;
+        setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
+      };
+
+      const handleRemovePhoto = (index) => {
+        const updatedPhotos = [...(editingRecipient.photos || [])];
+        if (updatedPhotos[index]) {
+          updatedPhotos[index].url = '';
+        }
+        setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
+      };
+
+      const handleSaveRecipient = () => {
+        const nextRecipients = recipients.map(r => r.id === editingRecipient.id ? editingRecipient : r);
+        setRecipients(nextRecipients);
+        alert(`Đã lưu toàn bộ thông tin, lời nhắn riêng và ảnh cá nhân cho ${editingRecipient.fullName}!`);
+      };
+
+      return (
+        <div className="space-y-4">
+          {/* SELECT RECIPIENT DROPDOWN */}
+          <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <span className="font-editorial text-sm font-bold text-deepPink uppercase tracking-wider">
+                CHỌN NGƯỜI NHẬN ĐỂ CHỈNH SỬA
+              </span>
+              <select
+                value={selectedRecId}
+                onChange={(e) => setSelectedRecId(e.target.value)}
+                className="w-full sm:w-auto p-2.5 rounded-xl border border-dustyRose bg-pearl text-deepPink font-bold text-xs focus:outline-none"
+              >
+                {recipients.map(r => (
+                  <option key={r.id} value={r.id}>
+                    {r.fullName} ({r.group || 'GENTLEMAN'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* EDITABLE DETAILS CONTAINER */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-blush border border-dustyRose shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b border-dustyRose/80 pb-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+                  className="text-xs font-bold text-deepPink hover:opacity-80 flex items-center gap-1 bg-pearl px-2.5 py-1 rounded-lg border border-dustyRose"
+                >
+                  {isDetailsExpanded ? '▼ THU GỌN THÔNG TIN' : '▶ HIỂN THỊ CHI TIẾT NGƯỜI NHẬN'}
+                </button>
+              </div>
+
+              <button
+                onClick={handleSaveRecipient}
+                className="px-4 py-2 rounded-xl bg-deepPink text-pearl text-xs font-bold shadow-md hover:bg-deepPink/90 transition"
+              >
+                💾 LƯU THAY ĐỔI
+              </button>
+            </div>
+
+            {isDetailsExpanded && (
+              <div className="space-y-4 pt-1">
+                {/* GENERAL INFO FORM */}
+                <div className="p-3.5 rounded-xl bg-pearl border border-dustyRose space-y-3">
+                  <h4 className="text-xs font-bold text-deepPink uppercase">1. THÔNG TIN HIỂN THỊ HỒ SƠ</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-navy uppercase mb-1">Họ và tên người nhận</label>
+                      <input
+                        type="text"
+                        value={editingRecipient.fullName || ''}
+                        onChange={(e) => setEditingRecipient({ ...editingRecipient, fullName: e.target.value })}
+                        className="w-full p-2 rounded-lg border border-dustyRose text-xs font-semibold text-navy bg-blush/20 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-navy uppercase mb-1">Lớp / Nhóm phân biệt</label>
+                      <input
+                        type="text"
+                        value={editingRecipient.group || ''}
+                        onChange={(e) => setEditingRecipient({ ...editingRecipient, group: e.target.value })}
+                        className="w-full p-2 rounded-lg border border-dustyRose text-xs font-semibold text-navy bg-blush/20 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-navy uppercase mb-1">Kết quả tính cách (Archetype)</label>
+                      <input
+                        type="text"
+                        value={editingRecipient.personality || ''}
+                        onChange={(e) => setEditingRecipient({ ...editingRecipient, personality: e.target.value })}
+                        className="w-full p-2 rounded-lg border border-dustyRose text-xs font-semibold text-navy bg-blush/20 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PERSONAL SECRET MESSAGE FORM */}
+                <div className="p-3.5 rounded-xl bg-pearl border border-dustyRose space-y-2">
+                  <h4 className="text-xs font-bold text-deepPink uppercase">2. LỜI NHẮN BÍ MẬT RIÊNG CHO NGƯỜI NÀY</h4>
+                  <textarea
+                    rows="3"
+                    value={editingRecipient.secretMessage || ''}
+                    onChange={(e) => setEditingRecipient({ ...editingRecipient, secretMessage: e.target.value })}
+                    placeholder="Nhập lời nhắn bí mật cá nhân hóa..."
+                    className="w-full p-2.5 rounded-lg border border-dustyRose text-xs text-navy font-medium bg-blush/10 focus:outline-none"
+                  />
+                </div>
+
+                {/* PERSONAL PHOTO MANAGEMENT SECTION */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-deepPink uppercase">3. QUẢN LÝ & CĂN CHỈNH KHUNG HÌNH 2 ẢNH CÁ NHÂN</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[0, 1].map((idx) => {
+                      const photo = (editingRecipient.photos && editingRecipient.photos[idx]) || { url: '', caption: '', fit: 'cover', position: 'center' };
+                      return (
+                        <div key={idx} className="p-3 rounded-xl bg-pearl border border-dustyRose space-y-2">
+                          <div className="flex justify-between items-center text-[11px] font-bold text-deepPink">
+                            <span>ẢNH CÁ NHÂN 0{idx + 1}</span>
+                            <span className="text-[10px] text-navy font-mono">ID: {editingRecipient.id}</span>
+                          </div>
+
+                          <div className="w-full aspect-square rounded-lg overflow-hidden border border-dustyRose bg-blush/40 flex items-center justify-center relative">
+                            {photo.url ? (
+                              <img
+                                src={photo.url}
+                                alt={`Personal ${idx + 1}`}
+                                className="w-full h-full"
+                                style={{ objectFit: photo.fit || 'cover', objectPosition: photo.position || 'center' }}
+                              />
+                            ) : (
+                              <div className="text-center p-2">
+                                <span className="text-xl block mb-1">🖼️</span>
+                                <span className="text-[10px] font-bold text-deepPink/70">Chưa có ảnh</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-deepPink uppercase mb-1">Chú thích ảnh 0{idx + 1}</label>
+                            <input
+                              type="text"
+                              placeholder="Nhập chú thích..."
+                              value={photo.caption || ''}
+                              onChange={(e) => handleCaptionChange(idx, e.target.value)}
+                              className="w-full p-2 rounded-lg border border-dustyRose text-xs text-deepPink font-semibold bg-blush/30 focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                            <div>
+                              <label className="block text-navy mb-1">Chế độ khung ảnh</label>
+                              <select
+                                value={photo.fit || 'cover'}
+                                onChange={(e) => handlePhotoFitChange(idx, e.target.value)}
+                                className="w-full p-1.5 rounded-md border border-dustyRose bg-blush/20 text-navy"
+                              >
+                                <option value="cover">Cover (Lấp đầy khung)</option>
+                                <option value="contain">Contain (Trọn vẹn ảnh)</option>
+                                <option value="fill">Fill (Co giãn)</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-navy mb-1">Căn vị trí ảnh</label>
+                              <select
+                                value={photo.position || 'center'}
+                                onChange={(e) => handlePhotoPositionChange(idx, e.target.value)}
+                                className="w-full p-1.5 rounded-md border border-dustyRose bg-blush/20 text-navy"
+                              >
+                                <option value="center">Giữa (Center)</option>
+                                <option value="top">Trên (Top)</option>
+                                <option value="bottom">Dưới (Bottom)</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 text-xs font-bold pt-1">
+                            <label className="flex-1 py-1.5 px-2 rounded-lg bg-deepPink text-pearl text-center cursor-pointer hover:bg-deepPink/90 transition text-[11px]">
+                              <span>{photo.url ? 'Thay ảnh' : 'Tải ảnh lên'}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handlePhotoUpload(idx, e.target.files[0])}
+                              />
+                            </label>
+                            {photo.url && (
+                              <button
+                                onClick={() => handleRemovePhoto(idx)}
+                                className="py-1.5 px-3 rounded-lg bg-rose-600 text-white text-center hover:bg-rose-700 transition text-[11px]"
+                              >
+                                Xóa
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // GLOBAL LETTER MANAGEMENT COMPONENT
+    function AdminLetterManagement({ globalLetter, setGlobalLetter }) {
+      const [localLetter, setLocalLetter] = useState(globalLetter);
+
+      const handleSaveLetter = () => {
+        setGlobalLetter(localLetter);
+        alert('Đã cập nhật nội dung Thư gửi chung cho tất cả người nhận!');
+      };
+
+      return (
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h3 className="font-editorial text-base font-bold text-deepPink">QUẢN LÝ THƯ GỬI CHUNG</h3>
+              <p className="text-xs text-navy font-semibold">
+                Sử dụng chuỗi <code>[Recipient Name]</code> để hệ thống tự động thay thế bằng tên của từng người.
+              </p>
+            </div>
+            <button
+              onClick={handleSaveLetter}
+              className="px-4 py-2 rounded-xl bg-deepPink text-pearl font-bold text-xs shadow-md hover:bg-deepPink/90 transition shrink-0"
+            >
+              💾 LƯU NỘI DUNG THƯ
+            </button>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-pearl border border-dustyRose shadow-sm space-y-2">
+            <textarea
+              rows="12"
+              value={localLetter}
+              onChange={(e) => setLocalLetter(e.target.value)}
+              className="w-full p-4 rounded-xl border border-dustyRose text-xs sm:text-sm font-medium text-navy leading-relaxed bg-blush/10 focus:outline-none"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // BACKGROUND MUSIC MANAGEMENT COMPONENT
+    function AdminMusicManagement({ musicUrl, setMusicUrl }) {
+      const [inputUrl, setInputUrl] = useState(musicUrl);
+
+      const handleSaveMusic = () => {
+        if (!inputUrl.trim()) return;
+        setMusicUrl(inputUrl.trim());
+        alert('Đã cập nhật đường dẫn nhạc nền mới thành công!');
+      };
+
+      const presetSongs = [
+        { name: 'Lofi Study Chill', url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3' },
+        { name: 'Gentle Acoustic Piano', url: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a7331d.mp3?filename=acoustic-guitars-ambient-10875.mp3' },
+        { name: 'Relaxing Warm Atmosphere', url: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=soft-rain-ambient-111154.mp3' }
+      ];
+
+      return (
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h3 className="font-editorial text-base font-bold text-deepPink">QUẢN LÝ NHẠC NỀN WEBSITE</h3>
+              <p className="text-xs text-navy font-semibold">Dán đường dẫn audio MP3 trực tiếp hoặc chọn bản nhạc có sẵn bên dưới.</p>
+            </div>
+            <button
+              onClick={handleSaveMusic}
+              className="px-4 py-2 rounded-xl bg-deepPink text-pearl font-bold text-xs shadow-md hover:bg-deepPink/90 transition shrink-0"
+            >
+              💾 LƯU NHẠC NỀN
+            </button>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-pearl border border-dustyRose shadow-sm space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-deepPink uppercase mb-1">Đường dẫn Audio (MP3 URL)</label>
+              <input
+                type="text"
+                value={inputUrl}
+                onChange={(e) => setInputUrl(e.target.value)}
+                placeholder="https://example.com/song.mp3"
+                className="w-full p-3 rounded-xl border border-dustyRose text-xs font-mono text-navy bg-blush/20 focus:outline-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-navy uppercase">Gợi ý bản nhạc có sẵn:</span>
+              <div className="space-y-1.5">
+                {presetSongs.map((song, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setInputUrl(song.url)}
+                    className="w-full p-2.5 rounded-xl bg-blush/40 hover:bg-blush border border-dustyRose text-left text-xs font-semibold text-navy flex justify-between items-center transition"
+                  >
+                    <span>🎵 {song.name}</span>
+                    <span className="text-[10px] text-deepPink font-bold">Chọn bản này</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // SHARED GROUP PHOTOS MANAGEMENT COMPONENT WITH FRAME FIT
+    function AdminSharedPhotosManagement({ sharedPhotos, setSharedPhotos }) {
+      const handleUploadGroup = (idx, file) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const updated = [...sharedPhotos];
+          if (!updated[idx]) updated[idx] = { url: '', caption: '', fit: 'cover', position: 'center' };
+          updated[idx].url = e.target.result;
+          setSharedPhotos(updated);
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const handleCaptionGroup = (idx, caption) => {
+        const updated = [...sharedPhotos];
+        if (!updated[idx]) updated[idx] = { url: '', caption: '', fit: 'cover', position: 'center' };
+        updated[idx].caption = caption;
+        setSharedPhotos(updated);
+      };
+
+      const handleFitGroup = (idx, fit) => {
+        const updated = [...sharedPhotos];
+        if (!updated[idx]) updated[idx] = { url: '', caption: '' };
+        updated[idx].fit = fit;
+        setSharedPhotos(updated);
+      };
+
+      return (
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm space-y-2">
+            <h3 className="font-editorial text-base font-bold text-deepPink">SHARED GROUP PHOTOS MANAGEMENT</h3>
+            <p className="text-xs text-navy">2 bức ảnh tập thể dùng chung hiển thị cho TOÀN BỘ người nhận trên website.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[0, 1].map((idx) => {
+              const photo = sharedPhotos[idx] || { url: '', caption: '', fit: 'cover', position: 'center' };
+              return (
+                <div key={idx} className="p-3 rounded-xl bg-pearl border border-dustyRose space-y-3">
+                  <div className="text-xs font-bold text-deepPink">SHARED GROUP PHOTO 0{idx + 1}</div>
+                  <div className="w-full aspect-video rounded-lg overflow-hidden border border-dustyRose bg-blush/40 flex items-center justify-center">
+                    {photo.url ? (
+                      <img
+                        src={photo.url}
+                        alt={`Group ${idx + 1}`}
+                        className="w-full h-full"
+                        style={{ objectFit: photo.fit || 'cover', objectPosition: photo.position || 'center' }}
+                      />
+                    ) : (
+                      <span className="text-xs font-bold text-deepPink/70">Chưa có ảnh</span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Chú thích ảnh tập thể..."
+                    value={photo.caption || ''}
+                    onChange={(e) => handleCaptionGroup(idx, e.target.value)}
+                    className="w-full p-2 rounded-lg border border-dustyRose text-xs text-deepPink font-semibold bg-blush/30 focus:outline-none"
+                  />
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-navy">
+                    <span>Chế độ hiển thị:</span>
+                    <select
+                      value={photo.fit || 'cover'}
+                      onChange={(e) => handleFitGroup(idx, e.target.value)}
+                      className="p-1 rounded border border-dustyRose bg-blush/20"
+                    >
+                      <option value="cover">Cover (Lấp đầy)</option>
+                      <option value="contain">Contain (Trọn vẹn)</option>
+                    </select>
+                  </div>
+                  <label className="block w-full py-2 px-3 rounded-lg bg-deepPink text-pearl text-center text-xs font-bold cursor-pointer hover:bg-deepPink/90 transition">
+                    Tải ảnh tập thể lên
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleUploadGroup(idx, e.target.files[0])}
+                    />
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // Mount React App
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
