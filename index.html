@@ -259,10 +259,8 @@ CHỊ EM PHONG TRÀO.`;
         return localStorage.getItem('ga_global_letter') || DEFAULT_GLOBAL_LETTER;
       });
 
-      // Background Music URL state
-      const [musicUrl, setMusicUrl] = useState(() => {
-        return localStorage.getItem('ga_music_url') || 'THẾ GIỚI CỦA ANH  TINH HÀ SAY HI  OFFICIAL VISUALIZER - Vie Channel - MUSIC.mp3';
-      });
+      // Fixed Built-in Local Audio Stream Source (Guaranteed to load locally)
+      const defaultAudioSource = 'THẾ GIỚI CỦA ANH  TINH HÀ SAY HI  OFFICIAL VISUALIZER - Vie Channel - MUSIC.mp3';
 
       const [activeRecipient, setActiveRecipient] = useState(null);
       const [nameInput, setNameInput] = useState('');
@@ -282,21 +280,14 @@ CHỊ EM PHONG TRÀO.`;
           audio.pause();
           setIsPlaying(false);
         } else {
-          // Force load if not ready and attempt immediate user-gesture play
           audio.load();
           const playPromise = audio.play();
-          
           if (playPromise !== undefined) {
             playPromise
-              .then(() => {
-                setIsPlaying(true);
-              })
+              .then(() => setIsPlaying(true))
               .catch((err) => {
-                console.warn("Playback error or blocked, switching to fallback track:", err);
-                // Fallback direct HTTPS mp3 link if initial track fails
-                audio.src = 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3';
-                audio.load();
-                audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+                console.warn("Playback error:", err);
+                setIsPlaying(false);
               });
           }
         }
@@ -306,9 +297,7 @@ CHỊ EM PHONG TRÀO.`;
       useEffect(() => {
         const handleFirstInteraction = () => {
           if (audioRef.current && audioRef.current.paused) {
-            audioRef.current.play().then(() => {
-              setIsPlaying(true);
-            }).catch(() => {});
+            audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
           }
           window.removeEventListener('click', handleFirstInteraction);
           window.removeEventListener('touchstart', handleFirstInteraction);
@@ -321,7 +310,7 @@ CHỊ EM PHONG TRÀO.`;
           window.removeEventListener('click', handleFirstInteraction);
           window.removeEventListener('touchstart', handleFirstInteraction);
         };
-      }, [musicUrl]);
+      }, []);
 
       // Floating Icons state
       const [floatingIcons, setFloatingIcons] = useState([]);
@@ -353,10 +342,6 @@ CHỊ EM PHONG TRÀO.`;
       }, [globalLetter]);
 
       useEffect(() => {
-        localStorage.setItem('ga_music_url', musicUrl);
-      }, [musicUrl]);
-
-      useEffect(() => {
         localStorage.setItem('ga_thank_yous', JSON.stringify(thankYouList));
       }, [thankYouList]);
 
@@ -374,7 +359,6 @@ CHỊ EM PHONG TRÀO.`;
         }
         setFloatingIcons(newFloating);
         
-        // Also fire canvas confetti
         if (window.confetti) {
           window.confetti({
             particleCount: 80,
@@ -400,7 +384,7 @@ CHỊ EM PHONG TRÀO.`;
           setErrorMessage('Không tìm thấy tên trong danh sách. Vui lòng kiểm tra lại!');
         } else if (matches.length === 1) {
           setActiveRecipient(matches[0]);
-          setStep(2); // Go to quiz
+          setStep(2);
         } else {
           setDuplicateMatches(matches);
         }
@@ -415,7 +399,7 @@ CHỊ EM PHONG TRÀO.`;
       return (
         <div className="min-h-screen bg-powderBlue text-navy flex flex-col justify-between relative selection:bg-blush selection:text-deepPink">
           {/* Background Audio */}
-          <audio ref={audioRef} loop src={musicUrl} />
+          <audio ref={audioRef} loop src={defaultAudioSource} preload="auto" />
 
           {/* Floating 5-Criteria Icons Effect */}
           {floatingIcons.map((item) => (
@@ -564,8 +548,6 @@ CHỊ EM PHONG TRÀO.`;
               setSharedPhotos={setSharedPhotos}
               globalLetter={globalLetter}
               setGlobalLetter={setGlobalLetter}
-              musicUrl={musicUrl}
-              setMusicUrl={setMusicUrl}
               thankYouList={thankYouList}
               setThankYouList={setThankYouList}
             />
@@ -1080,7 +1062,7 @@ CHỊ EM PHONG TRÀO.`;
         setExporting(true);
 
         window.html2canvas(cardRef.current, {
-          scale: 2, // High resolution
+          scale: 2,
           useCORS: true,
           backgroundColor: '#DCE7F3'
         }).then(canvas => {
@@ -1130,7 +1112,7 @@ CHỊ EM PHONG TRÀO.`;
             </button>
           </div>
 
-          {/* HIDDEN / OFFSCREEN 1080x1350 MEMORY CARD TARGET FOR PERFECT RATIO */}
+          {/* OFFSCREEN 1080x1350 MEMORY CARD TARGET */}
           <div className="overflow-hidden h-0 w-0 pointer-events-none opacity-0">
             <div
               ref={cardRef}
@@ -1176,7 +1158,7 @@ CHỊ EM PHONG TRÀO.`;
       );
     }
 
-    // ADMIN HUB WITH ENHANCED TABS & GLOBAL LETTER EDITING
+    // ADMIN HUB WITH ENHANCED TABS & GLOBAL LETTER EDITING (MUSIC SETTINGS REMOVED)
     function AdminModal({
       adminAuthed,
       setAdminAuthed,
@@ -1191,8 +1173,6 @@ CHỊ EM PHONG TRÀO.`;
       setSharedPhotos,
       globalLetter,
       setGlobalLetter,
-      musicUrl,
-      setMusicUrl,
       thankYouList,
       setThankYouList
     }) {
@@ -1249,13 +1229,13 @@ CHỊ EM PHONG TRÀO.`;
               </form>
             ) : (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-                {/* Admin Tabs */}
+                {/* Admin Tabs (Music tab removed) */}
                 <div className="flex flex-wrap gap-2 border-b border-dustyRose pb-3 sticky top-0 bg-pearl z-10 pt-1">
                   <button
                     onClick={() => setAdminTab('recipients')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'recipients' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
                   >
-                    1. NGƯỜI NHẬN & LỜI NHẮN BÍ MẬT
+                    1. NGƯỜI NHẬN & LỜI NHẮN
                   </button>
 
                   <button
@@ -1263,13 +1243,6 @@ CHỊ EM PHONG TRÀO.`;
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'letter' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
                   >
                     2. THƯ GỬI CHUNG
-                  </button>
-
-                  <button
-                    onClick={() => setAdminTab('music')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'music' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
-                  >
-                    🎵 NHẠC NỀN
                   </button>
 
                   <button
@@ -1287,7 +1260,6 @@ CHỊ EM PHONG TRÀO.`;
                   </button>
                 </div>
 
-                {/* TAB 1: RECIPIENT INFORMATION, SECRET MESSAGE & PHOTO FRAME ADJUSTMENT */}
                 {adminTab === 'recipients' && (
                   <AdminRecipientManagement
                     recipients={recipients}
@@ -1295,7 +1267,6 @@ CHỊ EM PHONG TRÀO.`;
                   />
                 )}
 
-                {/* TAB 2: GLOBAL LETTER MANAGEMENT */}
                 {adminTab === 'letter' && (
                   <AdminLetterManagement
                     globalLetter={globalLetter}
@@ -1303,15 +1274,6 @@ CHỊ EM PHONG TRÀO.`;
                   />
                 )}
 
-                {/* TAB MUSIC: BACKGROUND MUSIC URL & FILE UPLOAD */}
-                {adminTab === 'music' && (
-                  <AdminMusicManagement
-                    musicUrl={musicUrl}
-                    setMusicUrl={setMusicUrl}
-                  />
-                )}
-
-                {/* TAB 3: SHARED GROUP PHOTOS */}
                 {adminTab === 'sharedPhotos' && (
                   <AdminSharedPhotosManagement
                     sharedPhotos={sharedPhotos}
@@ -1319,7 +1281,6 @@ CHỊ EM PHONG TRÀO.`;
                   />
                 )}
 
-                {/* TAB 4: THANK YOU MESSAGES */}
                 {adminTab === 'thankYous' && (
                   <div className="space-y-4">
                     <h3 className="font-editorial text-lg font-bold text-deepPink">THANK YOU MESSAGES INBOX</h3>
@@ -1416,7 +1377,6 @@ CHỊ EM PHONG TRÀO.`;
 
       return (
         <div className="space-y-4">
-          {/* SELECT RECIPIENT DROPDOWN */}
           <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm space-y-3">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <span className="font-editorial text-sm font-bold text-deepPink uppercase tracking-wider">
@@ -1436,7 +1396,6 @@ CHỊ EM PHONG TRÀO.`;
             </div>
           </div>
 
-          {/* EDITABLE DETAILS CONTAINER */}
           <div className="p-4 sm:p-5 rounded-2xl bg-blush border border-dustyRose shadow-sm space-y-4">
             <div className="flex justify-between items-center border-b border-dustyRose/80 pb-2">
               <div className="flex items-center gap-2">
@@ -1459,7 +1418,6 @@ CHỊ EM PHONG TRÀO.`;
 
             {isDetailsExpanded && (
               <div className="space-y-4 pt-1">
-                {/* GENERAL INFO FORM */}
                 <div className="p-3.5 rounded-xl bg-pearl border border-dustyRose space-y-3">
                   <h4 className="text-xs font-bold text-deepPink uppercase">1. THÔNG TIN HIỂN THỊ HỒ SƠ</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1495,7 +1453,6 @@ CHỊ EM PHONG TRÀO.`;
                   </div>
                 </div>
 
-                {/* PERSONAL SECRET MESSAGE FORM */}
                 <div className="p-3.5 rounded-xl bg-pearl border border-dustyRose space-y-2">
                   <h4 className="text-xs font-bold text-deepPink uppercase">2. LỜI NHẮN BÍ MẬT RIÊNG CHO NGƯỜI NÀY</h4>
                   <textarea
@@ -1507,7 +1464,6 @@ CHỊ EM PHONG TRÀO.`;
                   />
                 </div>
 
-                {/* PERSONAL PHOTO MANAGEMENT SECTION */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold text-deepPink uppercase">3. QUẢN LÝ & CĂN CHỈNH KHUNG HÌNH 2 ẢNH CÁ NHÂN</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1639,115 +1595,6 @@ CHỊ EM PHONG TRÀO.`;
               onChange={(e) => setInputLetter(e.target.value)}
               className="w-full p-4 rounded-xl border border-dustyRose text-xs sm:text-sm font-medium text-navy leading-relaxed bg-blush/10 focus:outline-none focus:border-deepPink font-sans"
             />
-          </div>
-        </div>
-      );
-    }
-
-    // BACKGROUND MUSIC MANAGEMENT COMPONENT WITH FILE UPLOAD SUPPORT
-    function AdminMusicManagement({ musicUrl, setMusicUrl }) {
-      const [inputUrl, setInputUrl] = useState(musicUrl);
-
-      const handleSaveMusic = () => {
-        if (!inputUrl.trim()) return;
-        setMusicUrl(inputUrl.trim());
-        alert('Đã cập nhật nhạc nền mới thành công!');
-      };
-
-      // Handle local file upload and convert to Data URL
-      const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('audio/')) {
-          alert('Vui lòng chọn file âm thanh (định dạng MP3, WAV, M4A, v.v.)');
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const dataUrl = event.target.result;
-          setInputUrl(dataUrl);
-          setMusicUrl(dataUrl);
-          alert(`Đã tải lên thành công file nhạc từ máy: "${file.name}"!`);
-        };
-        reader.readAsDataURL(file);
-      };
-
-      const presetSongs = [
-        { name: 'Lofi Study Chill', url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3' },
-        { name: 'Gentle Acoustic Piano', url: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a7331d.mp3?filename=acoustic-guitars-ambient-10875.mp3' },
-        { name: 'Relaxing Warm Atmosphere', url: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=soft-rain-ambient-111154.mp3' }
-      ];
-
-      return (
-        <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-              <h3 className="font-editorial text-base font-bold text-deepPink">QUẢN LÝ NHẠC NỀN WEBSITE</h3>
-              <p className="text-xs text-navy font-semibold">Tải file nhạc trực tiếp từ máy hoặc nhập đường dẫn MP3.</p>
-            </div>
-            <button
-              onClick={handleSaveMusic}
-              className="px-4 py-2 rounded-xl bg-deepPink text-pearl font-bold text-xs shadow-md hover:bg-deepPink/90 transition shrink-0"
-            >
-              💾 LƯU NHẠC NỀN
-            </button>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-pearl border border-dustyRose shadow-sm space-y-4">
-            {/* OPTION 1: FILE UPLOAD FROM COMPUTER/PHONE */}
-            <div className="p-3.5 bg-blush/30 rounded-xl border border-dustyRose space-y-2">
-              <label className="block text-xs font-bold text-deepPink uppercase">
-                📁 TẢI FILE NHẠC TRỰC TIẾP TỪ MÁY TÍNH / ĐIỆN THOẠI
-              </label>
-              <div className="flex items-center gap-3">
-                <label className="flex-1 py-3 px-4 rounded-xl bg-deepPink text-pearl text-center text-xs font-bold cursor-pointer hover:bg-deepPink/90 transition shadow-sm">
-                  <span>🎵 BẤM VÀO ĐÂY ĐỂ CHỌN FILE MP3 TỪ MÁY...</span>
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                </label>
-              </div>
-              <p className="text-[11px] text-navy/70 italic">
-                * Khuyên dùng: Cách này sẽ nhúng thẳng bài hát từ máy của bạn vào trang web, đảm bảo không bị lỗi link hỏng hoặc bị GitHub chặn!
-              </p>
-            </div>
-
-            {/* OPTION 2: DIRECT URL */}
-            <div>
-              <label className="block text-xs font-bold text-deepPink uppercase mb-1">HOẶC DÁN ĐƯỜNG DẪN MP3 (URL)</label>
-              <input
-                type="text"
-                value={inputUrl}
-                onChange={(e) => setInputUrl(e.target.value)}
-                placeholder="https://example.com/song.mp3"
-                className="w-full p-3 rounded-xl border border-dustyRose text-xs font-mono text-navy bg-blush/20 focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-navy uppercase">Gợi ý bản nhạc mẫu:</span>
-              <div className="space-y-1.5">
-                {presetSongs.map((song, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setInputUrl(song.url);
-                      setMusicUrl(song.url);
-                    }}
-                    className="w-full p-2.5 rounded-xl bg-blush/40 hover:bg-blush border border-dustyRose text-left text-xs font-semibold text-navy flex justify-between items-center transition"
-                  >
-                    <span>🎵 {song.name}</span>
-                    <span className="text-[10px] text-deepPink font-bold">Chọn bản này</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       );
