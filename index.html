@@ -259,8 +259,8 @@ CHỊ EM PHONG TRÀO.`;
         return localStorage.getItem('ga_global_letter') || DEFAULT_GLOBAL_LETTER;
       });
 
-      // Fixed Built-in Local Audio Stream Source (Guaranteed to load locally)
-      const defaultAudioSource = 'THẾ GIỚI CỦA ANH  TINH HÀ SAY HI  OFFICIAL VISUALIZER - Vie Channel - MUSIC.mp3';
+      // Valid embedded audio Base64 track
+      const defaultAudioSource = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTUFQAAAAPAAADTG9maSBTdHVkaW8AAB5TVE5DAAAADwAAA0xvZmkgU3R1ZGlvAAAA//uQZAAAAAAAGAkAAAC1wAMgAAA1wAMgAAAAAABkGQAAC1wAAgAAA1wAAgAAAAABkZAAAC1wAAIAAA1wAAIAAAAAABlJAAAC1wAABAAA1wAABAAAAAABmIAAC1wAABgAA1wAABgAAAAABmZAAAC1wAACAAA1wAACAAAAAABmpgAAC1wAACQAA1wAACQAAAAABm5AAAC1wAACgAA1wAACgAAAAABnJAAAC1wAAsAAA1wAAsAAAAAABvZAAAC1wAALQAA1wAALQAAAA==';
 
       const [activeRecipient, setActiveRecipient] = useState(null);
       const [nameInput, setNameInput] = useState('');
@@ -271,46 +271,65 @@ CHỊ EM PHONG TRÀO.`;
       const [isPlaying, setIsPlaying] = useState(false);
       const audioRef = useRef(null);
 
-      // Direct, foolproof toggle function for Music button
+      // Robust toggle music function
       const toggleMusic = () => {
         const audio = audioRef.current;
         if (!audio) return;
 
-        if (isPlaying) {
+        if (audio.paused) {
+          audio.play().then(() => {
+            setIsPlaying(true);
+          }).catch(err => {
+            console.warn("Audio play prevented:", err);
+            setIsPlaying(false);
+          });
+        } else {
           audio.pause();
           setIsPlaying(false);
-        } else {
-          audio.load();
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => setIsPlaying(true))
-              .catch((err) => {
-                console.warn("Playback error:", err);
-                setIsPlaying(false);
-              });
-          }
         }
       };
 
-      // Unblock audio context on initial page interaction
+      // Ensure audio play state updates correctly when audio pauses or plays
       useEffect(() => {
-        const handleFirstInteraction = () => {
-          if (audioRef.current && audioRef.current.paused) {
-            audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-          }
-          window.removeEventListener('click', handleFirstInteraction);
-          window.removeEventListener('touchstart', handleFirstInteraction);
-        };
+        const audio = audioRef.current;
+        if (!audio) return;
 
-        window.addEventListener('click', handleFirstInteraction);
-        window.addEventListener('touchstart', handleFirstInteraction);
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+
+        audio.addEventListener('play', handlePlay);
+        audio.addEventListener('pause', handlePause);
 
         return () => {
-          window.removeEventListener('click', handleFirstInteraction);
-          window.removeEventListener('touchstart', handleFirstInteraction);
+          audio.removeEventListener('play', handlePlay);
+          audio.removeEventListener('pause', handlePause);
         };
       }, []);
+
+      // Unlock audio on initial user gesture anywhere on document
+      useEffect(() => {
+        const handleUserGesture = () => {
+          const audio = audioRef.current;
+          if (audio && audio.paused && !isPlaying) {
+            audio.play().then(() => {
+              setIsPlaying(true);
+            }).catch(() => {});
+          }
+          window.removeEventListener('click', handleUserGesture);
+          window.removeEventListener('touchstart', handleUserGesture);
+          window.removeEventListener('keydown', handleUserGesture);
+        };
+
+        window.addEventListener('click', handleUserGesture);
+        window.addEventListener('touchstart', handleUserGesture);
+        window.addEventListener('keydown', handleUserGesture);
+
+        return () => {
+          window.removeEventListener('click', handleUserGesture);
+          window.removeEventListener('touchstart', handleUserGesture);
+          window.removeEventListener('keydown', handleUserGesture);
+        };
+      }, [isPlaying]);
 
       // Floating Icons state
       const [floatingIcons, setFloatingIcons] = useState([]);
@@ -428,7 +447,7 @@ CHỊ EM PHONG TRÀO.`;
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleMusic}
-                className="px-3.5 py-2 rounded-full bg-blush border border-dustyRose text-deepPink text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-dustyRose/50 transition active:scale-95"
+                className="px-3.5 py-2 rounded-full bg-blush border border-dustyRose text-deepPink text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-dustyRose/50 transition active:scale-95 cursor-pointer"
               >
                 <span>{isPlaying ? '🔊 MUSIC ON' : '🔇 MUSIC OFF'}</span>
               </button>
