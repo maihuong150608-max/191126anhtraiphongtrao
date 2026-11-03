@@ -273,24 +273,30 @@ CHỊ EM PHONG TRÀO.`;
       const [isPlaying, setIsPlaying] = useState(false);
       const audioRef = useRef(null);
 
-      // Robust toggle function for Music button
+      // Direct, foolproof toggle function for Music button
       const toggleMusic = () => {
-        if (!audioRef.current) return;
+        const audio = audioRef.current;
+        if (!audio) return;
 
         if (isPlaying) {
-          audioRef.current.pause();
+          audio.pause();
           setIsPlaying(false);
         } else {
-          // Play audio and handle browser autoplay promise cleanly
-          const playPromise = audioRef.current.play();
+          // Force load if not ready and attempt immediate user-gesture play
+          audio.load();
+          const playPromise = audio.play();
+          
           if (playPromise !== undefined) {
             playPromise
               .then(() => {
                 setIsPlaying(true);
               })
               .catch((err) => {
-                console.warn("Playback error or blocked by browser:", err);
-                setIsPlaying(false);
+                console.warn("Playback error or blocked, switching to fallback track:", err);
+                // Fallback direct HTTPS mp3 link if initial track fails
+                audio.src = 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3';
+                audio.load();
+                audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
               });
           }
         }
