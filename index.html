@@ -273,29 +273,49 @@ CHỊ EM PHONG TRÀO.`;
       const [isPlaying, setIsPlaying] = useState(false);
       const audioRef = useRef(null);
 
-      // Handle user interaction to unlock background music playback on GitHub Pages / Browsers
-      const enableAudioOnInteraction = () => {
-        if (audioRef.current && !isPlaying) {
-          audioRef.current.play().then(() => {
-            setIsPlaying(true);
-            // Remove listener once audio successfully starts playing
-            window.removeEventListener('click', enableAudioOnInteraction);
-            window.removeEventListener('touchstart', enableAudioOnInteraction);
-          }).catch((err) => {
-            console.log("Autoplay waiting for user interaction:", err);
-          });
+      // Robust toggle function for Music button
+      const toggleMusic = () => {
+        if (!audioRef.current) return;
+
+        if (isPlaying) {
+          audioRef.current.pause();
+          setIsPlaying(false);
+        } else {
+          // Play audio and handle browser autoplay promise cleanly
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                setIsPlaying(true);
+              })
+              .catch((err) => {
+                console.warn("Playback error or blocked by browser:", err);
+                setIsPlaying(false);
+              });
+          }
         }
       };
 
+      // Unblock audio context on initial page interaction
       useEffect(() => {
-        // Listen for first user click/touch anywhere on the page to unblock audio
-        window.addEventListener('click', enableAudioOnInteraction);
-        window.addEventListener('touchstart', enableAudioOnInteraction);
-        return () => {
-          window.removeEventListener('click', enableAudioOnInteraction);
-          window.removeEventListener('touchstart', enableAudioOnInteraction);
+        const handleFirstInteraction = () => {
+          if (audioRef.current && audioRef.current.paused) {
+            audioRef.current.play().then(() => {
+              setIsPlaying(true);
+            }).catch(() => {});
+          }
+          window.removeEventListener('click', handleFirstInteraction);
+          window.removeEventListener('touchstart', handleFirstInteraction);
         };
-      }, [musicUrl, isPlaying]);
+
+        window.addEventListener('click', handleFirstInteraction);
+        window.addEventListener('touchstart', handleFirstInteraction);
+
+        return () => {
+          window.removeEventListener('click', handleFirstInteraction);
+          window.removeEventListener('touchstart', handleFirstInteraction);
+        };
+      }, [musicUrl]);
 
       // Floating Icons state
       const [floatingIcons, setFloatingIcons] = useState([]);
@@ -384,16 +404,6 @@ CHỊ EM PHONG TRÀO.`;
         setActiveRecipient(rec);
         setDuplicateMatches([]);
         setStep(2);
-      };
-
-      const toggleMusic = () => {
-        if (!audioRef.current) return;
-        if (isPlaying) {
-          audioRef.current.pause();
-          setIsPlaying(false);
-        } else {
-          audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-        }
       };
 
       return (
