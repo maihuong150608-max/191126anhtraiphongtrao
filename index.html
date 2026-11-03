@@ -261,7 +261,7 @@ CHỊ EM PHONG TRÀO.`;
 
       // Background Music URL state
       const [musicUrl, setMusicUrl] = useState(() => {
-        return localStorage.getItem('ga_music_url') || 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3';
+        return localStorage.getItem('ga_music_url') || 'THẾ GIỚI CỦA ANH  TINH HÀ SAY HI  OFFICIAL VISUALIZER - Vie Channel - MUSIC.mp3';
       });
 
       const [activeRecipient, setActiveRecipient] = useState(null);
@@ -1303,7 +1303,7 @@ CHỊ EM PHONG TRÀO.`;
                   />
                 )}
 
-                {/* TAB MUSIC: BACKGROUND MUSIC URL */}
+                {/* TAB MUSIC: BACKGROUND MUSIC URL & FILE UPLOAD */}
                 {adminTab === 'music' && (
                   <AdminMusicManagement
                     musicUrl={musicUrl}
@@ -1608,50 +1608,70 @@ CHỊ EM PHONG TRÀO.`;
 
     // GLOBAL LETTER MANAGEMENT COMPONENT
     function AdminLetterManagement({ globalLetter, setGlobalLetter }) {
-      const [localLetter, setLocalLetter] = useState(globalLetter);
+      const [inputLetter, setInputLetter] = useState(globalLetter);
 
       const handleSaveLetter = () => {
-        setGlobalLetter(localLetter);
-        alert('Đã cập nhật nội dung Thư gửi chung cho tất cả người nhận!');
+        if (!inputLetter.trim()) return;
+        setGlobalLetter(inputLetter);
+        alert('Đã lưu nội dung Thư gửi chung mới thành công!');
       };
 
       return (
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <h3 className="font-editorial text-base font-bold text-deepPink">QUẢN LÝ THƯ GỬI CHUNG</h3>
-              <p className="text-xs text-navy font-semibold">
-                Sử dụng chuỗi <code>[Recipient Name]</code> để hệ thống tự động thay thế bằng tên của từng người.
-              </p>
+              <h3 className="font-editorial text-base font-bold text-deepPink">QUẢN LÝ THƯ CHÚC MỪNG CHUNG</h3>
+              <p className="text-xs text-navy font-semibold">Nội dung thư chính gửi đến tất cả các anh em. Sử dụng [Recipient Name] để tự động điền tên.</p>
             </div>
             <button
               onClick={handleSaveLetter}
               className="px-4 py-2 rounded-xl bg-deepPink text-pearl font-bold text-xs shadow-md hover:bg-deepPink/90 transition shrink-0"
             >
-              💾 LƯU NỘI DUNG THƯ
+              💾 LƯU THƯ CHUNG
             </button>
           </div>
 
-          <div className="p-4 rounded-2xl bg-pearl border border-dustyRose shadow-sm space-y-2">
+          <div className="p-4 rounded-2xl bg-pearl border border-dustyRose shadow-sm space-y-3">
+            <label className="block text-xs font-bold text-deepPink uppercase">NỘI DUNG THƯ CHÚC MỪNG</label>
             <textarea
               rows="12"
-              value={localLetter}
-              onChange={(e) => setLocalLetter(e.target.value)}
-              className="w-full p-4 rounded-xl border border-dustyRose text-xs sm:text-sm font-medium text-navy leading-relaxed bg-blush/10 focus:outline-none"
+              value={inputLetter}
+              onChange={(e) => setInputLetter(e.target.value)}
+              className="w-full p-4 rounded-xl border border-dustyRose text-xs sm:text-sm font-medium text-navy leading-relaxed bg-blush/10 focus:outline-none focus:border-deepPink font-sans"
             />
           </div>
         </div>
       );
     }
 
-    // BACKGROUND MUSIC MANAGEMENT COMPONENT
+    // BACKGROUND MUSIC MANAGEMENT COMPONENT WITH FILE UPLOAD SUPPORT
     function AdminMusicManagement({ musicUrl, setMusicUrl }) {
       const [inputUrl, setInputUrl] = useState(musicUrl);
 
       const handleSaveMusic = () => {
         if (!inputUrl.trim()) return;
         setMusicUrl(inputUrl.trim());
-        alert('Đã cập nhật đường dẫn nhạc nền mới thành công!');
+        alert('Đã cập nhật nhạc nền mới thành công!');
+      };
+
+      // Handle local file upload and convert to Data URL
+      const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('audio/')) {
+          alert('Vui lòng chọn file âm thanh (định dạng MP3, WAV, M4A, v.v.)');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const dataUrl = event.target.result;
+          setInputUrl(dataUrl);
+          setMusicUrl(dataUrl);
+          alert(`Đã tải lên thành công file nhạc từ máy: "${file.name}"!`);
+        };
+        reader.readAsDataURL(file);
       };
 
       const presetSongs = [
@@ -1665,7 +1685,7 @@ CHỊ EM PHONG TRÀO.`;
           <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h3 className="font-editorial text-base font-bold text-deepPink">QUẢN LÝ NHẠC NỀN WEBSITE</h3>
-              <p className="text-xs text-navy font-semibold">Dán đường dẫn audio MP3 trực tiếp hoặc chọn bản nhạc có sẵn bên dưới.</p>
+              <p className="text-xs text-navy font-semibold">Tải file nhạc trực tiếp từ máy hoặc nhập đường dẫn MP3.</p>
             </div>
             <button
               onClick={handleSaveMusic}
@@ -1676,8 +1696,30 @@ CHỊ EM PHONG TRÀO.`;
           </div>
 
           <div className="p-4 rounded-2xl bg-pearl border border-dustyRose shadow-sm space-y-4">
+            {/* OPTION 1: FILE UPLOAD FROM COMPUTER/PHONE */}
+            <div className="p-3.5 bg-blush/30 rounded-xl border border-dustyRose space-y-2">
+              <label className="block text-xs font-bold text-deepPink uppercase">
+                📁 TẢI FILE NHẠC TRỰC TIẾP TỪ MÁY TÍNH / ĐIỆN THOẠI
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="flex-1 py-3 px-4 rounded-xl bg-deepPink text-pearl text-center text-xs font-bold cursor-pointer hover:bg-deepPink/90 transition shadow-sm">
+                  <span>🎵 BẤM VÀO ĐÂY ĐỂ CHỌN FILE MP3 TỪ MÁY...</span>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                </label>
+              </div>
+              <p className="text-[11px] text-navy/70 italic">
+                * Khuyên dùng: Cách này sẽ nhúng thẳng bài hát từ máy của bạn vào trang web, đảm bảo không bị lỗi link hỏng hoặc bị GitHub chặn!
+              </p>
+            </div>
+
+            {/* OPTION 2: DIRECT URL */}
             <div>
-              <label className="block text-xs font-bold text-deepPink uppercase mb-1">Đường dẫn Audio (MP3 URL)</label>
+              <label className="block text-xs font-bold text-deepPink uppercase mb-1">HOẶC DÁN ĐƯỜNG DẪN MP3 (URL)</label>
               <input
                 type="text"
                 value={inputUrl}
@@ -1688,13 +1730,16 @@ CHỊ EM PHONG TRÀO.`;
             </div>
 
             <div className="space-y-2">
-              <span className="text-xs font-bold text-navy uppercase">Gợi ý bản nhạc có sẵn:</span>
+              <span className="text-xs font-bold text-navy uppercase">Gợi ý bản nhạc mẫu:</span>
               <div className="space-y-1.5">
                 {presetSongs.map((song, i) => (
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setInputUrl(song.url)}
+                    onClick={() => {
+                      setInputUrl(song.url);
+                      setMusicUrl(song.url);
+                    }}
                     className="w-full p-2.5 rounded-xl bg-blush/40 hover:bg-blush border border-dustyRose text-left text-xs font-semibold text-navy flex justify-between items-center transition"
                   >
                     <span>🎵 {song.name}</span>
