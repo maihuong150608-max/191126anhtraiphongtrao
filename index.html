@@ -54,6 +54,53 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
+  <!-- Firebase Modular SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Global variables & Firebase Config initialization
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'gentlemen-archive-2026';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' 
+      ? JSON.parse(__firebase_config) 
+      : {
+          apiKey: "demo-api-key",
+          authDomain: "demo-app.firebaseapp.com",
+          projectId: "demo-app",
+          storageBucket: "demo-app.appspot.com",
+          messagingSenderId: "123456789",
+          appId: "1:123456789:web:demo"
+        };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Authenticate user & attach global Firebase utilities
+    window.fbDb = db;
+    window.fbAppId = appId;
+    window.fbDoc = doc;
+    window.fbSetDoc = setDoc;
+    window.fbOnSnapshot = onSnapshot;
+
+    async function initAuth() {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+        window.fbUser = auth.currentUser;
+        window.dispatchEvent(new Event('firebase-ready'));
+      } catch (e) {
+        console.warn("Firebase Auth fallback/warning:", e);
+        window.dispatchEvent(new Event('firebase-ready'));
+      }
+    }
+    initAuth();
+  </script>
+
   <style>
     body {
       background-color: #DCE7F3;
@@ -110,7 +157,7 @@
         .trim();
     };
 
-    // Initial Recipients list updated to the 6 exact names requested
+    // Initial Recipients list
     const INITIAL_RECIPIENTS = [
       {
         id: 'rec_01',
@@ -149,11 +196,11 @@
         id: 'rec_04',
         fullName: 'Đồng Hoàng Dũng',
         group: 'GENTLEMAN',
-        personality: 'THE CHAOS MANAGER',
+        personality: 'MARTIN PHONG TRÀO',
         secretMessage: 'Chúc Hoàng Dũng luôn giữ vững nguồn năng lượng tích cực và điều hành mọi việc cực mượt!',
         photos: [
-          { url: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=500&auto=format&fit=crop', caption: 'Hoàng Dũng với tinh thần tích cực', fit: 'cover', position: 'center' },
-          { url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500&auto=format&fit=crop', caption: 'Kỷ niệm đẹp cùng tập thể', fit: 'cover', position: 'center' }
+          { url: 'img1.jpg', caption: 'Hoàng Dũng với tinh thần tích cực', fit: 'cover', position: 'center' },
+          { url: 'img2.jpg', caption: 'Kỷ niệm đẹp cùng tập thể', fit: 'cover', position: 'center' }
         ]
       },
       {
@@ -242,164 +289,834 @@ CHỊ EM PHONG TRÀO.`;
       }
     ];
 
-    // Main App Component
-    function App() {
-      const [step, setStep] = useState(1);
-      const [recipients, setRecipients] = useState(() => {
-        const saved = localStorage.getItem('ga_recipients');
-        return saved ? JSON.parse(saved) : INITIAL_RECIPIENTS;
-      });
+    // --- STEP COMPONENTS ---
 
-      const [sharedPhotos, setSharedPhotos] = useState(() => {
-        const saved = localStorage.getItem('ga_shared_photos');
-        return saved ? JSON.parse(saved) : DEFAULT_SHARED_PHOTOS;
-      });
+    function NameInputStep({ nameInput, setNameInput, handleNameSubmit, errorMessage, duplicateMatches, handleSelectDuplicate }) {
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-center animate-fadeIn">
+          <div className="w-16 h-16 bg-blush rounded-2xl flex items-center justify-center mx-auto mb-4 text-deepPink text-2xl shadow-inner">
+            ✉️
+          </div>
+          <h1 className="font-editorial text-2xl sm:text-3xl font-bold text-navy mb-2">
+            The Gentlemen's Archive
+          </h1>
+          <p className="text-softGrey text-sm mb-6 max-w-md mx-auto">
+            Chào mừng bạn đến với món quà số dành riêng cho Ngày Quốc tế Đàn ông 2026. Vui lòng nhập họ và tên của bạn để mở hộp thư.
+          </p>
 
-      const [globalLetter, setGlobalLetter] = useState(() => {
-        return localStorage.getItem('ga_global_letter') || DEFAULT_GLOBAL_LETTER;
-      });
+          <form onSubmit={handleNameSubmit} className="space-y-4 max-w-md mx-auto">
+            <div>
+              <input
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                placeholder="Nhập đầy đủ họ và tên..."
+                className="w-full px-5 py-3.5 rounded-2xl border border-dustyRose focus:outline-none focus:ring-2 focus:ring-deepPink/40 bg-white text-navy font-medium text-center placeholder-softGrey/60 shadow-sm"
+              />
+            </div>
 
-      // 🎵 DÁN CHUỖI BASE64 CỦA FILE NHẠC TỪ MÁY BẠN VÀO GIỮA CẶP DẤU NHÁY ĐƠN '' Ở DƯỚI ĐÂY:
-      // Ví dụ: const defaultAudioSource = 'data:audio/mp3;base64,SUQzBAAAAAAAI1TS...';
-      const defaultAudioSource = 'music.mp3';
+            {errorMessage && (
+              <p className="text-red-500 text-xs font-semibold bg-red-50 p-2.5 rounded-xl border border-red-100">
+                {errorMessage}
+              </p>
+            )}
 
-      const [activeRecipient, setActiveRecipient] = useState(null);
-      const [nameInput, setNameInput] = useState('');
-      const [duplicateMatches, setDuplicateMatches] = useState([]);
-      const [errorMessage, setErrorMessage] = useState('');
+            <button
+              type="submit"
+              className="w-full py-3.5 px-6 rounded-2xl bg-deepPink text-white font-bold shadow-button hover:bg-deepPink/90 transition active:scale-95 cursor-pointer"
+            >
+              MỞ HỘP THƯ
+            </button>
+          </form>
 
-      // Audio Player state & Web Audio Fallback Synth
-      const [isPlaying, setIsPlaying] = useState(false);
-      const audioRef = useRef(null);
-      const audioCtxRef = useRef(null);
-      const synthIntervalRef = useRef(null);
+          {duplicateMatches.length > 0 && (
+            <div className="mt-6 p-4 bg-blush/40 rounded-2xl border border-dustyRose text-left">
+              <p className="text-xs font-bold text-deepPink mb-2">Tìm thấy nhiều người nhận trùng tên. Vui lòng chọn đúng tên bạn:</p>
+              <div className="space-y-2">
+                {duplicateMatches.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => handleSelectDuplicate(m)}
+                    className="w-full text-left p-3 bg-white rounded-xl border border-dustyRose hover:border-deepPink transition text-xs font-semibold text-navy flex justify-between items-center"
+                  >
+                    <span>{m.fullName}</span>
+                    <span className="text-[10px] bg-dustyRose/40 px-2 py-1 rounded-md text-deepPink">{m.personality}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
 
-      // Web Audio API synth generator as foolproof fallback if media file is empty
-      const playSynthMelody = () => {
-        try {
-          if (!audioCtxRef.current) {
-            audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-          }
-          if (audioCtxRef.current.state === 'suspended') {
-            audioCtxRef.current.resume();
-          }
+    function QuizStep({ activeRecipient, onComplete }) {
+      const [currentQ, setCurrentQ] = useState(0);
 
-          const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23];
-          let noteIdx = 0;
-
-          if (synthIntervalRef.current) clearInterval(synthIntervalRef.current);
-
-          synthIntervalRef.current = setInterval(() => {
-            if (!audioCtxRef.current || audioCtxRef.current.state !== 'running') return;
-            const osc = audioCtxRef.current.createOscillator();
-            const gain = audioCtxRef.current.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(notes[noteIdx % notes.length], audioCtxRef.current.currentTime);
-            gain.gain.setValueAtTime(0.05, audioCtxRef.current.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtxRef.current.currentTime + 0.8);
-            osc.connect(gain);
-            gain.connect(audioCtxRef.current.destination);
-            osc.start();
-            osc.stop(audioCtxRef.current.currentTime + 0.8);
-            noteIdx++;
-          }, 600);
-        } catch (e) {
-          console.warn("Synth fallback error:", e);
-        }
-      };
-
-      const stopSynthMelody = () => {
-        if (synthIntervalRef.current) {
-          clearInterval(synthIntervalRef.current);
-          synthIntervalRef.current = null;
-        }
-        if (audioCtxRef.current && audioCtxRef.current.state === 'running') {
-          audioCtxRef.current.suspend();
-        }
-      };
-
-      // Robust toggle music function
-      const toggleMusic = () => {
-        const audio = audioRef.current;
-        const nextState = !isPlaying;
-
-        if (nextState) {
-          setIsPlaying(true);
-          if (audio && defaultAudioSource.trim()) {
-            audio.play().catch(err => {
-              console.warn("Audio file play blocked, switching to Web Audio synth fallback:", err);
-              playSynthMelody();
-            });
-          } else {
-            playSynthMelody();
-          }
+      const handleOptionClick = () => {
+        if (currentQ < QUIZ_QUESTIONS.length - 1) {
+          setCurrentQ(currentQ + 1);
         } else {
-          setIsPlaying(false);
-          if (audio) {
-            audio.pause();
-          }
-          stopSynthMelody();
+          onComplete();
         }
       };
 
-      // Clean up synth on unmount
+      const q = QUIZ_QUESTIONS[currentQ];
+
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-center animate-fadeIn">
+          <div className="flex justify-between items-center mb-6">
+            <span className="text-xs font-bold text-deepPink bg-blush px-3 py-1 rounded-full">
+              MINI QUIZ • CÂU {currentQ + 1}/{QUIZ_QUESTIONS.length}
+            </span>
+            <span className="text-xs text-softGrey font-semibold">Gửi: {activeRecipient?.fullName}</span>
+          </div>
+
+          <h2 className="font-editorial text-lg sm:text-xl font-bold text-navy mb-6">
+            {q.question}
+          </h2>
+
+          <div className="space-y-3">
+            {q.options.map((opt, idx) => (
+              <button
+                key={idx}
+                onClick={handleOptionClick}
+                className="w-full p-4 rounded-2xl bg-white border border-dustyRose/60 hover:border-deepPink hover:bg-blush/20 transition text-left text-xs sm:text-sm font-medium text-navy shadow-sm flex items-start gap-3 active:scale-[0.98] cursor-pointer"
+              >
+                <span className="w-6 h-6 rounded-full bg-powderBlue text-deepPink text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                  {String.fromCharCode(65 + idx)}
+                </span>
+                <span>{opt.text}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function PersonalityResultStep({ activeRecipient, onNext }) {
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-center animate-fadeIn">
+          <span className="text-xs font-bold text-deepPink tracking-widest uppercase bg-blush px-3 py-1 rounded-full mb-3 inline-block">
+            RESULT UNLOCKED
+          </span>
+          <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-navy mb-1">
+            {activeRecipient?.fullName}
+          </h2>
+          <p className="text-xs font-bold text-deepPink mb-6 tracking-wide uppercase">
+            {activeRecipient?.personality}
+          </p>
+
+          <div className="p-5 bg-powderBlue/40 rounded-2xl border border-dustyRose/50 mb-6 text-left text-xs sm:text-sm text-navy leading-relaxed">
+            <p className="font-semibold text-deepPink mb-1">✨ Danh hiệu đặc quyền:</p>
+            <p>Sở hữu phong thái tự tin cùng tinh thần trách nhiệm tuyệt vời. Bạn luôn biết cách tỏa sáng và là mảnh ghép không thể thiếu của tập thể!</p>
+          </div>
+
+          <button
+            onClick={onNext}
+            className="w-full py-3.5 px-6 rounded-2xl bg-deepPink text-white font-bold shadow-button hover:bg-deepPink/90 transition active:scale-95 cursor-pointer"
+          >
+            NHẬN THƯ VÀ QUÀ TẶNG ✉️
+          </button>
+        </div>
+      );
+    }
+
+    function EnvelopeStep({ activeRecipient, onOpen }) {
+      const [isOpen, setIsOpen] = useState(false);
+
+      const handleEnvelopeClick = () => {
+        setIsOpen(true);
+        setTimeout(() => {
+          onOpen();
+        }, 900);
+      };
+
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-center animate-fadeIn">
+          <h2 className="font-editorial text-xl sm:text-2xl font-bold text-navy mb-2">
+            Thư mừng dành cho {activeRecipient?.fullName}
+          </h2>
+          <p className="text-xs text-softGrey mb-6">Chạm vào phong bì bên dưới để mở lá thư đặc biệt</p>
+
+          <div 
+            onClick={handleEnvelopeClick}
+            className={`envelope-wrapper my-8 cursor-pointer group transition transform hover:scale-105`}
+          >
+            <div className={`envelope w-64 h-40 mx-auto bg-blush rounded-2xl border-2 border-dustyRose shadow-lg flex flex-col justify-center items-center relative overflow-hidden ${isOpen ? 'open' : ''}`}>
+              <div className="text-4xl mb-1">💌</div>
+              <span className="font-editorial font-bold text-xs text-deepPink uppercase tracking-wider">
+                CONFIDENTIAL
+              </span>
+              <span className="text-[10px] text-navy font-semibold mt-1">FOR: {activeRecipient?.fullName}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function PersonalPhotosStep({ activeRecipient, onNext }) {
+      const photos = activeRecipient?.photos || [];
+
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-center animate-fadeIn">
+          <span className="text-xs font-bold text-deepPink bg-blush px-3 py-1 rounded-full mb-2 inline-block">
+            PERSONAL GALLERY
+          </span>
+          <h2 className="font-editorial text-xl sm:text-2xl font-bold text-navy mb-4">
+            Khoảnh khắc của {activeRecipient?.fullName}
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            {photos.map((p, idx) => (
+              <div key={idx} className="bg-white p-3 rounded-2xl border border-dustyRose/50 shadow-sm text-left">
+                <div className="w-full h-44 rounded-xl overflow-hidden bg-slate-100 mb-2">
+                  <img 
+                    src={p.url} 
+                    alt={p.caption} 
+                    className="w-full h-full"
+                    style={{ objectFit: p.fit || 'cover', objectPosition: p.position || 'center' }}
+                  />
+                </div>
+                <p className="text-xs font-semibold text-navy truncate">{p.caption || 'Hình ảnh kỷ niệm'}</p>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={onNext}
+            className="w-full py-3.5 px-6 rounded-2xl bg-deepPink text-white font-bold shadow-button hover:bg-deepPink/90 transition active:scale-95 cursor-pointer"
+          >
+            TIẾP TỤC ➡️
+          </button>
+        </div>
+      );
+    }
+
+    function SharedPhotosStep({ sharedPhotos, onNext }) {
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-center animate-fadeIn">
+          <span className="text-xs font-bold text-deepPink bg-blush px-3 py-1 rounded-full mb-2 inline-block">
+            SHARED MEMORIES
+          </span>
+          <h2 className="font-editorial text-xl sm:text-2xl font-bold text-navy mb-4">
+            Khoảnh Khắc Tập Thể
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            {sharedPhotos.map((p, idx) => (
+              <div key={idx} className="bg-white p-3 rounded-2xl border border-dustyRose/50 shadow-sm text-left">
+                <div className="w-full h-44 rounded-xl overflow-hidden bg-slate-100 mb-2">
+                  <img 
+                    src={p.url} 
+                    alt={p.caption} 
+                    className="w-full h-full"
+                    style={{ objectFit: p.fit || 'cover', objectPosition: p.position || 'center' }}
+                  />
+                </div>
+                <p className="text-xs font-semibold text-navy truncate">{p.caption || 'Ảnh tập thể'}</p>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={onNext}
+            className="w-full py-3.5 px-6 rounded-2xl bg-deepPink text-white font-bold shadow-button hover:bg-deepPink/90 transition active:scale-95 cursor-pointer"
+          >
+            ĐỌC THƯ CHÚC MỪNG 📜
+          </button>
+        </div>
+      );
+    }
+
+    function LetterStep({ activeRecipient, globalLetter, onNext }) {
+      const letterContent = globalLetter.replace(/\[Recipient Name\]/g, activeRecipient?.fullName || 'bạn');
+
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-left animate-fadeIn">
+          <div className="text-center mb-6">
+            <span className="text-xs font-bold text-deepPink bg-blush px-3 py-1 rounded-full inline-block mb-1">
+              OFFICIAL LETTER
+            </span>
+            <h2 className="font-editorial text-xl sm:text-2xl font-bold text-navy">
+              Thư Gửi Từ Chị Em Phong Trào
+            </h2>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-dustyRose/60 shadow-inner font-sans text-xs sm:text-sm leading-relaxed text-navy whitespace-pre-line mb-6">
+            {letterContent}
+          </div>
+
+          <button
+            onClick={onNext}
+            className="w-full py-3.5 px-6 rounded-2xl bg-deepPink text-white font-bold shadow-button hover:bg-deepPink/90 transition active:scale-95 cursor-pointer text-center block"
+          >
+            MỞ LỜI NHẮN BÍ MẬT 🤫
+          </button>
+        </div>
+      );
+    }
+
+    function SecretMessageStep({ activeRecipient, onNext }) {
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-center animate-fadeIn">
+          <span className="text-xs font-bold text-deepPink bg-blush px-3 py-1 rounded-full mb-2 inline-block">
+            SECRET MESSAGE
+          </span>
+          <h2 className="font-editorial text-xl sm:text-2xl font-bold text-navy mb-4">
+            Lời Nhắn Bí Mật Dành Cho {activeRecipient?.fullName}
+          </h2>
+
+          <div className="p-6 bg-blush/30 rounded-2xl border border-dustyRose shadow-sm text-navy text-xs sm:text-sm leading-relaxed mb-6 italic">
+            "{activeRecipient?.secretMessage || 'Chúc bạn một ngày Quốc tế Đàn ông thật nhiều niềm vui và luôn tỏa sáng!'}"
+          </div>
+
+          <button
+            onClick={onNext}
+            className="w-full py-3.5 px-6 rounded-2xl bg-deepPink text-white font-bold shadow-button hover:bg-deepPink/90 transition active:scale-95 cursor-pointer"
+          >
+            GỬI LỜI CẢM ƠN 💬
+          </button>
+        </div>
+      );
+    }
+
+    function ThankYouStep({ activeRecipient, thankYouList, setThankYouList, onNext }) {
+      const [msg, setMsg] = useState('');
+      const [submitted, setSubmitted] = useState(false);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!msg.trim()) return;
+
+        const newItem = {
+          id: Date.now(),
+          name: activeRecipient?.fullName || 'Ẩn danh',
+          message: msg,
+          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        };
+
+        const newList = [newItem, ...thankYouList];
+        setThankYouList(newList);
+        setSubmitted(true);
+      };
+
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-center animate-fadeIn">
+          <h2 className="font-editorial text-xl sm:text-2xl font-bold text-navy mb-2">
+            Phản Hồi & Lời Cảm ƠN
+          </h2>
+          <p className="text-xs text-softGrey mb-6">Gửi vài dòng nhắn gửi lại cho các Chị Em Phong Trào nhé!</p>
+
+          {!submitted ? (
+            <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+              <textarea
+                value={msg}
+                onChange={(e) => setMsg(e.target.value)}
+                placeholder="Nhập lời cảm ơn hoặc phản hồi của bạn..."
+                className="w-full p-4 rounded-2xl border border-dustyRose focus:outline-none focus:ring-2 focus:ring-deepPink/40 bg-white text-navy text-xs sm:text-sm min-h-[100px]"
+              />
+              <button
+                type="submit"
+                className="w-full py-3 px-6 rounded-2xl bg-deepPink text-white font-bold text-xs shadow-button hover:bg-deepPink/90 transition active:scale-95 cursor-pointer"
+              >
+                GỬI PHẢN HỒI 🚀
+              </button>
+            </form>
+          ) : (
+            <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-2xl text-xs font-bold mb-6">
+              ✓ Đã gửi phản hồi thành công! Cảm ơn bạn rất nhiều!
+            </div>
+          )}
+
+          <button
+            onClick={onNext}
+            className="w-full py-3.5 px-6 rounded-2xl bg-navy text-white font-bold shadow-sm hover:bg-navy/90 transition active:scale-95 cursor-pointer"
+          >
+            TỔNG KẾT & CHỨNG NHẬN 🏆
+          </button>
+        </div>
+      );
+    }
+
+    function FinalCelebrationStep({ activeRecipient, trigger5CriteriaEffect, onRestart }) {
       useEffect(() => {
-        return () => stopSynthMelody();
+        trigger5CriteriaEffect();
       }, []);
 
-      // Floating Icons state
-      const [floatingIcons, setFloatingIcons] = useState([]);
+      return (
+        <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-center animate-fadeIn">
+          <div className="w-20 h-20 bg-blush rounded-full flex items-center justify-center mx-auto mb-4 text-3xl text-deepPink shadow-inner">
+            👑
+          </div>
+          <span className="text-xs font-bold text-deepPink bg-blush px-3 py-1 rounded-full mb-2 inline-block uppercase">
+            THE 2026 GENTLEMAN CERTIFICATE
+          </span>
+          <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-navy mb-1">
+            {activeRecipient?.fullName}
+          </h2>
+          <p className="text-xs font-bold text-deepPink mb-6 uppercase">
+            {activeRecipient?.personality}
+          </p>
 
-      // Admin Modal State
+          <p className="text-xs text-softGrey leading-relaxed mb-6">
+            Chứng nhận đã hoàn thành xuất sắc hành trình khám phá và nhận quà tặng đặc quyền trong Ngày Quốc tế Đàn ông 2026!
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={trigger5CriteriaEffect}
+              className="w-full py-3 px-6 rounded-2xl bg-blush border border-dustyRose text-deepPink font-bold text-xs hover:bg-dustyRose/40 transition active:scale-95 cursor-pointer"
+            >
+              🎉 BẮT ĐẦU HIỆU ỨNG CHÚC MỪNG
+            </button>
+            <button
+              onClick={onRestart}
+              className="w-full py-3.5 px-6 rounded-2xl bg-deepPink text-white font-bold shadow-button hover:bg-deepPink/90 transition active:scale-95 cursor-pointer"
+            >
+              VỀ TRANG CHỦ 🏠
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // --- ADMIN MODAL COMPONENT ---
+
+    function AdminModal({
+      adminAuthed, setAdminAuthed, adminPasswordInput, setAdminPasswordInput, adminPassword, setAdminPassword,
+      onClose, recipients, setRecipients, sharedPhotos, setSharedPhotos, globalLetter, setGlobalLetter, thankYouList, setThankYouList
+    }) {
+      const [tab, setTab] = useState('recs');
+
+      const handleLogin = (e) => {
+        e.preventDefault();
+        const cleanedInput = (adminPasswordInput || '').trim();
+        const cleanedTarget = (adminPassword || '').trim();
+        
+        if (cleanedInput === cleanedTarget) {
+          setAdminAuthed(true);
+        } else {
+          alert("Sai mật khẩu Admin! Mật khẩu mặc định là: admin123");
+        }
+      };
+
+      // Recipient editing state
+      const [editingRec, setEditingRec] = useState(null);
+
+      const handleSaveRec = (rec) => {
+        const updated = recipients.map(r => r.id === rec.id ? rec : r);
+        setRecipients(updated);
+        setEditingRec(null);
+      };
+
+      const handleAddRec = () => {
+        const newR = {
+          id: 'rec_' + Date.now(),
+          fullName: 'Người nhận mới',
+          group: 'GENTLEMAN',
+          personality: 'THE GOLDEN GENTLEMAN',
+          secretMessage: 'Lời nhắn mới...',
+          photos: []
+        };
+        setRecipients([...recipients, newR]);
+      };
+
+      const handleDeleteRec = (id) => {
+        if (confirm("Xóa người nhận này?")) {
+          setRecipients(recipients.filter(r => r.id !== id));
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-pearl max-w-3xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto border border-dustyRose">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-dustyRose">
+              <h2 className="font-editorial text-xl font-bold text-navy flex items-center gap-2">
+                🔑 ADMIN DASHBOARD
+              </h2>
+              <button onClick={onClose} className="text-navy/60 hover:text-navy font-bold text-xl">✕</button>
+            </div>
+
+            {!adminAuthed ? (
+              <form onSubmit={handleLogin} className="space-y-4 max-w-sm mx-auto my-8">
+                <p className="text-xs text-softGrey font-medium text-center">Vui lòng nhập mật khẩu quản trị viên để mở khóa.</p>
+                <input
+                  type="password"
+                  value={adminPasswordInput}
+                  onChange={(e) => setAdminPasswordInput(e.target.value)}
+                  placeholder="Mật khẩu..."
+                  className="w-full px-4 py-3 rounded-xl border border-dustyRose bg-white text-navy text-sm text-center"
+                />
+                <button type="submit" className="w-full py-3 bg-deepPink text-white rounded-xl font-bold text-xs shadow-button">
+                  ĐĂNG NHẬP
+                </button>
+              </form>
+            ) : (
+              <div>
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2 border-b border-dustyRose/60">
+                  <button 
+                    onClick={() => setTab('recs')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap ${tab === 'recs' ? 'bg-deepPink text-white' : 'bg-blush text-deepPink'}`}
+                  >
+                    1. NGƯỜI NHẬN & LỜI NHẮN BÍ MẬT
+                  </button>
+                  <button 
+                    onClick={() => setTab('letter')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap ${tab === 'letter' ? 'bg-deepPink text-white' : 'bg-blush text-deepPink'}`}
+                  >
+                    2. THƯ GỬI CHUNG
+                  </button>
+                  <button 
+                    onClick={() => setTab('shared')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap ${tab === 'shared' ? 'bg-deepPink text-white' : 'bg-blush text-deepPink'}`}
+                  >
+                    3. Ảnh TẬP THỂ
+                  </button>
+                  <button 
+                    onClick={() => setTab('thanks')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap ${tab === 'thanks' ? 'bg-deepPink text-white' : 'bg-blush text-deepPink'}`}
+                  >
+                    4. PHẢN HỒI ({thankYouList.length})
+                  </button>
+                </div>
+
+                {tab === 'recs' && (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-softGrey">Danh sách ({recipients.length})</span>
+                      <button onClick={handleAddRec} className="px-3 py-1.5 bg-deepPink text-white text-xs font-bold rounded-lg">+ Thêm người nhận</button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {recipients.map(r => (
+                        <div key={r.id} className="p-4 bg-white rounded-2xl border border-dustyRose/60 text-xs text-navy space-y-2">
+                          <div className="flex justify-between items-center font-bold">
+                            <span className="text-sm text-deepPink">{r.fullName}</span>
+                            <div className="flex gap-2">
+                              <button onClick={() => setEditingRec(r)} className="px-2 py-1 bg-blush text-deepPink rounded-md">Sửa</button>
+                              <button onClick={() => handleDeleteRec(r.id)} className="px-2 py-1 bg-red-100 text-red-600 rounded-md">Xóa</button>
+                            </div>
+                          </div>
+                          <p><strong>Danh hiệu:</strong> {r.personality}</p>
+                          <p><strong>Lời nhắn:</strong> {r.secretMessage}</p>
+                          <p><strong>Số ảnh cá nhân:</strong> {r.photos?.length || 0} ảnh</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {editingRec && (
+                      <div className="p-4 bg-powderBlue/40 rounded-2xl border border-dustyRose space-y-3 mt-4 text-xs">
+                        <h4 className="font-bold text-deepPink">Chỉnh sửa: {editingRec.fullName}</h4>
+                        <div>
+                          <label className="block font-semibold mb-1">Họ và tên:</label>
+                          <input 
+                            type="text" 
+                            value={editingRec.fullName} 
+                            onChange={(e) => setEditingRec({...editingRec, fullName: e.target.value})}
+                            className="w-full p-2 rounded-lg border bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold mb-1">Danh hiệu / Personality:</label>
+                          <input 
+                            type="text" 
+                            value={editingRec.personality} 
+                            onChange={(e) => setEditingRec({...editingRec, personality: e.target.value})}
+                            className="w-full p-2 rounded-lg border bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold mb-1">Lời nhắn bí mật:</label>
+                          <textarea 
+                            value={editingRec.secretMessage} 
+                            onChange={(e) => setEditingRec({...editingRec, secretMessage: e.target.value})}
+                            className="w-full p-2 rounded-lg border bg-white min-h-[60px]"
+                          />
+                        </div>
+
+                        {/* Tải ảnh cá nhân từ máy tính */}
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="font-bold text-deepPink">Ảnh cá nhân (Lưu Đám mây):</label>
+                            <label className="px-2.5 py-1 bg-deepPink text-white text-[11px] font-bold rounded-lg cursor-pointer hover:bg-deepPink/90">
+                              + Tải ảnh từ máy
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files[0];
+                                  if (!file) return;
+                                  const reader = new FileReader();
+                                  reader.onload = (uploadEvent) => {
+                                    const base64Url = uploadEvent.target.result;
+                                    const newPhotos = [...(editingRec.photos || []), { url: base64Url, caption: 'Ảnh cá nhân', fit: 'cover', position: 'center' }];
+                                    setEditingRec({ ...editingRec, photos: newPhotos });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }}
+                              />
+                            </label>
+                          </div>
+                          
+                          <div className="space-y-2 max-h-48 overflow-y-auto p-2 bg-white rounded-xl border border-dustyRose">
+                            {(editingRec.photos || []).map((p, pIdx) => (
+                              <div key={pIdx} className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                                <img src={p.url} className="w-10 h-10 object-cover rounded-lg shrink-0" />
+                                <input 
+                                  type="text" 
+                                  value={p.caption} 
+                                  onChange={(e) => {
+                                    const copy = [...editingRec.photos];
+                                    copy[pIdx].caption = e.target.value;
+                                    setEditingRec({ ...editingRec, photos: copy });
+                                  }}
+                                  placeholder="Chú thích ảnh..." 
+                                  className="flex-1 p-1.5 border rounded-md text-[11px]"
+                                />
+                                <button 
+                                  onClick={() => {
+                                    const copy = editingRec.photos.filter((_, i) => i !== pIdx);
+                                    setEditingRec({ ...editingRec, photos: copy });
+                                  }}
+                                  className="px-2 py-1 bg-red-100 text-red-600 rounded-md text-[10px] font-bold"
+                                >
+                                  Xóa
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <button onClick={() => handleSaveRec(editingRec)} className="px-4 py-2 bg-deepPink text-white rounded-lg font-bold">Lưu thay đổi lên Cloud</button>
+                          <button onClick={() => setEditingRec(null)} className="px-4 py-2 bg-slate-200 text-navy rounded-lg font-bold">Hủy</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {tab === 'letter' && (
+                  <div className="space-y-4 text-xs">
+                    <p className="text-softGrey">Dùng ký tự <code>[Recipient Name]</code> để tự động chèn tên người nhận vào thư.</p>
+                    <textarea
+                      value={globalLetter}
+                      onChange={(e) => setGlobalLetter(e.target.value)}
+                      className="w-full p-4 rounded-2xl border border-dustyRose bg-white text-navy font-sans min-h-[250px] leading-relaxed"
+                    />
+                  </div>
+                )}
+
+                {tab === 'shared' && (
+                  <div className="space-y-4 text-xs">
+                    <div className="flex justify-between items-center">
+                      <p className="text-softGrey font-medium">Danh sách ảnh tập thể hiển thị chung cho tất cả người nhận.</p>
+                      <label className="px-3 py-1.5 bg-deepPink text-white font-bold rounded-lg cursor-pointer hover:bg-deepPink/90 text-xs shrink-0">
+                        + Tải ảnh tập thể từ máy
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (uploadEvent) => {
+                              const base64Url = uploadEvent.target.result;
+                              setSharedPhotos([...sharedPhotos, { url: base64Url, caption: 'Kỷ niệm tập thể', fit: 'cover', position: 'center' }]);
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="space-y-3 max-h-[350px] overflow-y-auto">
+                      {sharedPhotos.map((p, idx) => (
+                        <div key={idx} className="p-3 bg-white rounded-xl border border-dustyRose flex gap-3 items-center">
+                          <img src={p.url} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                          <div className="flex-1 space-y-1">
+                            <input 
+                              type="text" 
+                              value={p.caption} 
+                              onChange={(e) => {
+                                const copy = [...sharedPhotos];
+                                copy[idx].caption = e.target.value;
+                                setSharedPhotos(copy);
+                              }}
+                              placeholder="Chú thích ảnh tập thể..."
+                              className="w-full p-1.5 border rounded-lg text-xs"
+                            />
+                          </div>
+                          <button 
+                            onClick={() => setSharedPhotos(sharedPhotos.filter((_, i) => i !== idx))}
+                            className="px-2.5 py-1.5 bg-red-100 text-red-600 font-bold rounded-lg text-xs"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {tab === 'thanks' && (
+                  <div className="space-y-3 text-xs">
+                    {thankYouList.length === 0 ? (
+                      <p className="text-softGrey text-center py-4">Chưa có phản hồi nào.</p>
+                    ) : (
+                      thankYouList.map(item => (
+                        <div key={item.id} className="p-3 bg-white rounded-xl border border-dustyRose">
+                          <div className="flex justify-between font-bold text-deepPink mb-1">
+                            <span>{item.name}</span>
+                            <span className="text-[10px] text-softGrey">{item.time}</span>
+                          </div>
+                          <p className="text-navy">{item.message}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      const [currentStep, setCurrentStep] = useState(1);
+      const [nameInput, setNameInput] = useState('');
+      const [errorMessage, setErrorMessage] = useState('');
+      const [activeRecipient, setActiveRecipient] = useState(null);
+      const [duplicateMatches, setDuplicateMatches] = useState([]);
+
+      const [recipients, setRecipients] = useState(INITIAL_RECIPIENTS);
+      const [sharedPhotos, setSharedPhotos] = useState(DEFAULT_SHARED_PHOTOS);
+      const [globalLetter, setGlobalLetter] = useState(DEFAULT_GLOBAL_LETTER);
+      const [thankYouList, setThankYouList] = useState([]);
+
+      // Music state & default audio stream / local file fallback
+      const [isPlaying, setIsPlaying] = useState(false);
+      const [defaultAudioSource, setDefaultAudioSource] = useState('music.mp3');
+      const audioRef = useRef(null);
+      const synthRef = useRef(null);
+
+      // Admin Modal state
       const [showAdmin, setShowAdmin] = useState(false);
       const [adminAuthed, setAdminAuthed] = useState(false);
+      const [adminPassword, setAdminPassword] = useState('admin123');
       const [adminPasswordInput, setAdminPasswordInput] = useState('');
-      const [adminPassword, setAdminPassword] = useState(() => {
-        return localStorage.getItem('ga_admin_pw') || 'gentlemen2026';
-      });
 
-      // Thank you messages storage
-      const [thankYouList, setThankYouList] = useState(() => {
-        const saved = localStorage.getItem('ga_thank_yous');
-        return saved ? JSON.parse(saved) : [];
-      });
-
+      // Firebase Realtime Syncing
       useEffect(() => {
-        localStorage.setItem('ga_recipients', JSON.stringify(recipients));
-      }, [recipients]);
+        const handleFbReady = () => {
+          if (!window.fbDb) return;
+          try {
+            const docRef = window.fbDoc(window.fbDb, "archives", window.fbAppId);
+            window.fbOnSnapshot(docRef, (docSnap) => {
+              if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.recipients) setRecipients(data.recipients);
+                if (data.sharedPhotos) setSharedPhotos(data.sharedPhotos);
+                if (data.globalLetter) setGlobalLetter(data.globalLetter);
+                if (data.thankYouList) setThankYouList(data.thankYouList);
+              }
+            }, (error) => {
+              console.warn("Firestore snapshot listener permission or connection warning:", error.message);
+            });
+          } catch (err) {
+            console.warn("Firestore sync setup error:", err);
+          }
+        };
 
+        window.addEventListener('firebase-ready', handleFbReady);
+        if (window.fbDb) handleFbReady();
+        return () => window.removeEventListener('firebase-ready', handleFbReady);
+      }, []);
+
+      // Auto save changes to Firestore when state updates
+      const isInitialMount = useRef(true);
       useEffect(() => {
-        localStorage.setItem('ga_shared_photos', JSON.stringify(sharedPhotos));
-      }, [sharedPhotos]);
-
-      useEffect(() => {
-        localStorage.setItem('ga_global_letter', globalLetter);
-      }, [globalLetter]);
-
-      useEffect(() => {
-        localStorage.setItem('ga_thank_yous', JSON.stringify(thankYouList));
-      }, [thankYouList]);
-
-      const trigger5CriteriaEffect = () => {
-        const icons = ['🌟', '🏃', '📚', '🌐', '🤝'];
-        const newFloating = [];
-        for (let i = 0; i < 25; i++) {
-          newFloating.push({
-            id: Date.now() + i,
-            icon: icons[Math.floor(Math.random() * icons.length)],
-            left: Math.random() * 90 + 5,
-            delay: Math.random() * 3,
-            duration: 4 + Math.random() * 3
-          });
+        if (isInitialMount.current) {
+          isInitialMount.current = false;
+          return;
         }
-        setFloatingIcons(newFloating);
-        
-        if (window.confetti) {
-          window.confetti({
-            particleCount: 80,
-            spread: 70,
-            origin: { y: 0.8 }
+        if (!window.fbDb) return;
+        try {
+          const docRef = window.fbDoc(window.fbDb, "archives", window.fbAppId);
+          window.fbSetDoc(docRef, {
+            recipients,
+            sharedPhotos,
+            globalLetter,
+            thankYouList,
+            updatedAt: new Date().toISOString()
+          }, { merge: true }).catch(err => {
+            console.warn("Cloud save permission/network warning:", err.message);
           });
+        } catch (err) {
+          console.warn("Cloud save error:", err);
+        }
+      }, [recipients, sharedPhotos, globalLetter, thankYouList]);
+
+      // Web Audio API Synthesizer fallback for reliable ambient sound
+      const playSynthAmbient = () => {
+        try {
+          if (!synthRef.current) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(329.63, ctx.currentTime); // E4 note
+            gain.gain.setValueAtTime(0.05, ctx.currentTime);
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            synthRef.current = { ctx, osc, gain };
+          }
+        } catch(e) {
+          console.warn("Synth fallback unavailable", e);
+        }
+      };
+
+      const stopSynthAmbient = () => {
+        if (synthRef.current) {
+          try {
+            synthRef.current.osc.stop();
+            synthRef.current.ctx.close();
+          } catch(e){}
+          synthRef.current = null;
+        }
+      };
+
+      const toggleMusic = () => {
+        if (!audioRef.current) return;
+        
+        if (isPlaying) {
+          audioRef.current.pause();
+          stopSynthAmbient();
+          setIsPlaying(false);
+        } else {
+          // Play HTML5 Audio or fallback to synth ambient sound
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              setIsPlaying(true);
+            }).catch(err => {
+              console.warn("Audio playback note:", err);
+              playSynthAmbient();
+              setIsPlaying(true);
+            });
+          } else {
+            setIsPlaying(true);
+          }
         }
       };
 
@@ -408,18 +1125,22 @@ CHỊ EM PHONG TRÀO.`;
         setErrorMessage('');
         setDuplicateMatches([]);
 
-        const norm = normalizeText(nameInput);
-        if (!norm) {
+        const cleanInput = normalizeText(nameInput);
+        if (!cleanInput) {
           setErrorMessage('Vui lòng nhập họ và tên của bạn.');
           return;
         }
 
-        const matches = recipients.filter(r => normalizeText(r.fullName) === norm);
+        const matches = recipients.filter(r => {
+          const cleanName = normalizeText(r.fullName);
+          return cleanName.includes(cleanInput) || cleanInput.includes(cleanName);
+        });
+
         if (matches.length === 0) {
-          setErrorMessage('Không tìm thấy tên trong danh sách. Vui lòng kiểm tra lại!');
+          setErrorMessage('Không tìm thấy tên của bạn trong danh sách. Vui lòng kiểm tra lại!');
         } else if (matches.length === 1) {
           setActiveRecipient(matches[0]);
-          setStep(2);
+          setCurrentStep(2);
         } else {
           setDuplicateMatches(matches);
         }
@@ -428,58 +1149,60 @@ CHỊ EM PHONG TRÀO.`;
       const handleSelectDuplicate = (rec) => {
         setActiveRecipient(rec);
         setDuplicateMatches([]);
-        setStep(2);
+        setCurrentStep(2);
+      };
+
+      const trigger5CriteriaEffect = () => {
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+        }
+      };
+
+      const handleRestart = () => {
+        setCurrentStep(1);
+        setNameInput('');
+        setActiveRecipient(null);
+        setDuplicateMatches([]);
       };
 
       return (
-        <div className="min-h-screen bg-powderBlue text-navy flex flex-col justify-between relative selection:bg-blush selection:text-deepPink">
-          {/* Background Audio */}
-          <audio ref={audioRef} loop src={defaultAudioSource} preload="auto" />
-
-          {/* Floating 5-Criteria Icons Effect */}
-          {floatingIcons.map((item) => (
-            <div
-              key={item.id}
-              className="floating-icon text-2xl select-none"
-              style={{
-                left: `${item.left}%`,
-                animationDelay: `${item.delay}s`,
-                animationDuration: `${item.duration}s`
-              }}
+        <div className="min-h-screen flex flex-col justify-between p-4 sm:p-6 relative max-w-xl mx-auto">
+          {/* Header Bar */}
+          <header className="flex justify-between items-center mb-6 z-40 relative">
+            <button 
+              onClick={() => setShowAdmin(true)}
+              className="text-xs font-bold text-navy/70 hover:text-navy bg-white/70 backdrop-blur-sm px-3.5 py-2 rounded-xl border border-dustyRose/40 shadow-sm transition"
             >
-              {item.icon}
-            </div>
-          ))}
+              🔑 ADMIN
+            </button>
 
-          {/* Header Controls */}
-          <header className="p-4 sm:p-6 flex justify-between items-center max-w-4xl mx-auto w-full z-10">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-deepPink animate-pulse"></span>
-              <span className="font-editorial font-bold text-sm sm:text-base text-deepPink tracking-wider uppercase">
-                THE GENTLEMEN'S ARCHIVE
-              </span>
-            </div>
+            <button 
+              onClick={toggleMusic}
+              className={`text-xs font-bold px-3.5 py-2 rounded-xl border transition shadow-sm flex items-center gap-1.5 ${
+                isPlaying 
+                  ? 'bg-deepPink text-white border-deepPink' 
+                  : 'bg-white/70 text-navy border-dustyRose/40'
+              }`}
+            >
+              {isPlaying ? '🔊 MUSIC ON' : '🔇 MUSIC OFF'}
+            </button>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={toggleMusic}
-                className="px-3.5 py-2 rounded-full bg-blush border border-dustyRose text-deepPink text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-dustyRose/50 transition active:scale-95 cursor-pointer"
-              >
-                <span>{isPlaying ? '🔊 MUSIC ON' : '🔇 MUSIC OFF'}</span>
-              </button>
-
-              <button
-                onClick={() => setShowAdmin(true)}
-                className="px-3.5 py-2 rounded-full bg-pearl border border-dustyRose text-navy text-xs font-bold hover:bg-dustyRose/40 transition active:scale-95"
-              >
-                🔑 ADMIN HUB
-              </button>
-            </div>
+            {/* Hidden HTML5 Audio element */}
+            <audio 
+              ref={audioRef} 
+              src={defaultAudioSource} 
+              loop 
+              preload="auto"
+            />
           </header>
 
-          {/* Main Flow Container */}
-          <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 sm:py-8 flex flex-col justify-center z-10">
-            {step === 1 && (
+          {/* Step Render Area */}
+          <main className="flex-1 flex flex-col justify-center my-auto">
+            {currentStep === 1 && (
               <NameInputStep
                 nameInput={nameInput}
                 setNameInput={setNameInput}
@@ -490,81 +1213,77 @@ CHỊ EM PHONG TRÀO.`;
               />
             )}
 
-            {step === 2 && (
+            {currentStep === 2 && (
               <QuizStep
                 activeRecipient={activeRecipient}
-                onComplete={() => setStep(3)}
+                onComplete={() => setCurrentStep(3)}
               />
             )}
 
-            {step === 3 && (
+            {currentStep === 3 && (
               <PersonalityResultStep
                 activeRecipient={activeRecipient}
-                onNext={() => setStep(4)}
+                onNext={() => setCurrentStep(4)}
               />
             )}
 
-            {step === 4 && (
+            {currentStep === 4 && (
               <EnvelopeStep
                 activeRecipient={activeRecipient}
-                onOpen={() => setStep(5)}
+                onOpen={() => setCurrentStep(5)}
               />
             )}
 
-            {step === 5 && (
+            {currentStep === 5 && (
               <PersonalPhotosStep
                 activeRecipient={activeRecipient}
-                onNext={() => setStep(6)}
+                onNext={() => setCurrentStep(6)}
               />
             )}
 
-            {step === 6 && (
+            {currentStep === 6 && (
               <SharedPhotosStep
                 sharedPhotos={sharedPhotos}
-                onNext={() => setStep(7)}
+                onNext={() => setCurrentStep(7)}
               />
             )}
 
-            {step === 7 && (
+            {currentStep === 7 && (
               <LetterStep
                 activeRecipient={activeRecipient}
                 globalLetter={globalLetter}
-                onNext={() => setStep(8)}
+                onNext={() => setCurrentStep(8)}
               />
             )}
 
-            {step === 8 && (
+            {currentStep === 8 && (
               <SecretMessageStep
                 activeRecipient={activeRecipient}
-                onNext={() => setStep(9)}
+                onNext={() => setCurrentStep(9)}
               />
             )}
 
-            {step === 9 && (
+            {currentStep === 9 && (
               <ThankYouStep
                 activeRecipient={activeRecipient}
                 thankYouList={thankYouList}
                 setThankYouList={setThankYouList}
-                onNext={() => setStep(10)}
+                onNext={() => setCurrentStep(10)}
               />
             )}
 
-            {step === 10 && (
+            {currentStep === 10 && (
               <FinalCelebrationStep
                 activeRecipient={activeRecipient}
                 trigger5CriteriaEffect={trigger5CriteriaEffect}
-                onRestart={() => {
-                  setStep(1);
-                  setNameInput('');
-                  setActiveRecipient(null);
-                }}
+                onRestart={handleRestart}
               />
             )}
           </main>
 
           {/* Footer */}
-          <footer className="p-4 text-center text-[11px] text-navy/70 font-semibold border-t border-dustyRose/60 bg-powderBlue/80 backdrop-blur-sm z-10">
-            <p>CHỊ EM PHONG TRÀO © 2026 • INTERNATIONAL MEN'S DAY DIGITAL GIFT</p>
+          <footer className="mt-8 text-center text-[11px] text-softGrey/80 font-medium tracking-wide">
+            INTERNATIONAL MEN'S DAY 2026 • CREATED WITH ❤️ BY CHỊ EM PHONG TRÀO
           </footer>
 
           {/* Admin Dashboard Modal */}
@@ -591,1139 +1310,7 @@ CHỊ EM PHONG TRÀO.`;
       );
     }
 
-    // STEP 1: NAME INPUT STEP
-    function NameInputStep({ nameInput, setNameInput, handleNameSubmit, errorMessage, duplicateMatches, handleSelectDuplicate }) {
-      return (
-        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
-          <div className="space-y-2">
-            <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
-              WELCOME GENTLEMEN
-            </span>
-            <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-deepPink">
-              HELLO, GENTLEMAN!
-            </h1>
-            <p className="text-xs sm:text-sm text-navy font-semibold">
-              Before we begin, tell us your full name.
-            </p>
-          </div>
-
-          <form onSubmit={handleNameSubmit} className="space-y-4 max-w-md mx-auto">
-            <div>
-              <input
-                type="text"
-                placeholder="Enter your full name..."
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                className="w-full p-4 rounded-2xl bg-pearl border-2 border-dustyRose text-center font-bold text-navy focus:outline-none focus:border-deepPink transition shadow-inner placeholder:text-softGrey text-sm sm:text-base"
-              />
-            </div>
-
-            {errorMessage && (
-              <p className="text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
-                {errorMessage}
-              </p>
-            )}
-
-            {duplicateMatches.length > 0 && (
-              <div className="bg-pearl p-4 rounded-2xl border border-dustyRose text-left space-y-2">
-                <p className="text-xs font-bold text-deepPink">Tìm thấy nhiều tài khoản trùng tên. Vui lòng chọn đúng bạn:</p>
-                <div className="space-y-1">
-                  {duplicateMatches.map(m => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => handleSelectDuplicate(m)}
-                      className="w-full p-2.5 rounded-xl bg-blush/40 hover:bg-blush text-xs font-bold text-navy flex justify-between items-center transition"
-                    >
-                      <span>{m.fullName}</span>
-                      <span className="text-[10px] bg-pearl px-2 py-0.5 rounded border border-dustyRose">{m.group || 'GENTLEMAN'}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs sm:text-sm tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
-            >
-              LET'S GO! 🚀
-            </button>
-          </form>
-        </div>
-      );
-    }
-
-    // STEP 2: QUIZ STEP
-    function QuizStep({ activeRecipient, onComplete }) {
-      const [currentQ, setCurrentQ] = useState(0);
-
-      const handleSelectOption = () => {
-        if (currentQ < QUIZ_QUESTIONS.length - 1) {
-          setCurrentQ(currentQ + 1);
-        } else {
-          onComplete();
-        }
-      };
-
-      const q = QUIZ_QUESTIONS[currentQ];
-
-      return (
-        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
-          <div className="flex justify-between items-center text-xs font-bold text-deepPink border-b border-dustyRose pb-3">
-            <span>PERSONAL QUIZ FOR {activeRecipient?.fullName?.toUpperCase()}</span>
-            <span>QUESTION {currentQ + 1} / {QUIZ_QUESTIONS.length}</span>
-          </div>
-
-          <div className="w-full bg-pearl h-2 rounded-full overflow-hidden border border-dustyRose">
-            <div
-              className="bg-deepPink h-full transition-all duration-300"
-              style={{ width: `${((currentQ + 1) / QUIZ_QUESTIONS.length) * 100}%` }}
-            />
-          </div>
-
-          <h2 className="font-editorial text-xl sm:text-2xl font-bold text-deepPink leading-snug">
-            {q.question}
-          </h2>
-
-          <div className="space-y-3">
-            {q.options.map((opt, idx) => (
-              <button
-                key={idx}
-                onClick={handleSelectOption}
-                className="w-full p-4 rounded-2xl bg-pearl hover:bg-dustyRose/40 border border-dustyRose text-left font-semibold text-xs sm:text-sm text-navy transition shadow-sm transform active:scale-[0.99] flex items-center gap-3"
-              >
-                <span className="w-6 h-6 rounded-full bg-blush text-deepPink font-bold flex items-center justify-center text-xs border border-dustyRose shrink-0">
-                  {String.fromCharCode(65 + idx)}
-                </span>
-                <span>{opt.text}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    // STEP 3: PERSONALITY RESULT
-    function PersonalityResultStep({ activeRecipient, onNext }) {
-      return (
-        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
-          <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
-            QUIZ RESULT
-          </span>
-
-          <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-deepPink">
-            YOUR PERSONALITY ARCHETYPE
-          </h2>
-
-          <div className="p-6 bg-pearl rounded-2xl border-2 border-dustyRose space-y-3 shadow-inner">
-            <h3 className="font-editorial text-xl font-bold text-deepPink uppercase">
-              {activeRecipient?.personality || 'THE GOLDEN GENTLEMAN'}
-            </h3>
-            <p className="text-xs sm:text-sm text-navy font-medium leading-relaxed">
-              Bạn luôn tỏa ra phong thái bản lĩnh, chu đáo và đem lại cảm giác tin tưởng tuyệt đối cho những người xung quanh!
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-xs font-bold text-navy uppercase tracking-wider">
-              CONGRATULATIONS, {activeRecipient?.fullName}! YOUR LETTER IS READY!
-            </p>
-            <button
-              onClick={onNext}
-              className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs sm:text-sm tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
-            >
-              OPEN MY LETTER ✉️
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // STEP 4: ENVELOPE STEP
-    function EnvelopeStep({ activeRecipient, onOpen }) {
-      const [isOpen, setIsOpen] = useState(false);
-
-      const handleOpen = () => {
-        setIsOpen(true);
-        setTimeout(() => {
-          onOpen();
-        }, 800);
-      };
-
-      return (
-        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
-          <h2 className="font-editorial text-2xl font-bold text-deepPink">
-            A SPECIAL LETTER FOR YOU
-          </h2>
-
-          <div className="envelope-wrapper py-6">
-            <div className={`envelope w-48 h-36 mx-auto bg-pearl rounded-2xl border-2 border-dustyRose shadow-xl flex items-center justify-center relative cursor-pointer ${isOpen ? 'open' : ''}`} onClick={handleOpen}>
-              <span className="text-4xl">💌</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleOpen}
-            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
-          >
-            CLICK TO OPEN ENVELOPE ✨
-          </button>
-        </div>
-      );
-    }
-
-    // STEP 5: PERSONAL PHOTOS (WITH FRAME FIT & POSITION SUPPORT)
-    function PersonalPhotosStep({ activeRecipient, onNext }) {
-      const photos = activeRecipient?.photos || [];
-      const photo1 = photos[0] || { url: '', caption: 'Ảnh cá nhân 01', fit: 'cover', position: 'center' };
-      const photo2 = photos[1] || { url: '', caption: 'Ảnh cá nhân 02', fit: 'cover', position: 'center' };
-
-      return (
-        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
-          <div className="text-center space-y-2">
-            <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
-              PERSONAL GALLERY
-            </span>
-            <h2 className="font-editorial text-2xl font-bold text-deepPink">
-              HEY, {activeRecipient?.fullName.toUpperCase()}!
-            </h2>
-            <p className="text-xs text-navy font-semibold">Today, you're the main character.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-pearl border border-dustyRose p-3 rounded-2xl space-y-2 shadow-sm">
-              <div className="aspect-square w-full rounded-xl overflow-hidden bg-powderBlue flex items-center justify-center">
-                {photo1.url ? (
-                  <img
-                    src={photo1.url}
-                    alt="Personal 1"
-                    className="w-full h-full"
-                    style={{ objectFit: photo1.fit || 'cover', objectPosition: photo1.position || 'center' }}
-                  />
-                ) : (
-                  <span className="text-xs font-bold text-deepPink">Personal Photo 01 Placeholder</span>
-                )}
-              </div>
-              <p className="text-[11px] font-medium text-navy text-center line-clamp-2">
-                {photo1.caption || 'Kỷ niệm cá nhân 01'}
-              </p>
-            </div>
-
-            <div className="bg-pearl border border-dustyRose p-3 rounded-2xl space-y-2 shadow-sm">
-              <div className="aspect-square w-full rounded-xl overflow-hidden bg-powderBlue flex items-center justify-center">
-                {photo2.url ? (
-                  <img
-                    src={photo2.url}
-                    alt="Personal 2"
-                    className="w-full h-full"
-                    style={{ objectFit: photo2.fit || 'cover', objectPosition: photo2.position || 'center' }}
-                  />
-                ) : (
-                  <span className="text-xs font-bold text-deepPink">Personal Photo 02 Placeholder</span>
-                )}
-              </div>
-              <p className="text-[11px] font-medium text-navy text-center line-clamp-2">
-                {photo2.caption || 'Kỷ niệm cá nhân 02'}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={onNext}
-            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
-          >
-            CONTINUE TO GROUP MEMORIES ➡️
-          </button>
-        </div>
-      );
-    }
-
-    // STEP 6: SHARED GROUP PHOTOS (EXACTLY 2 PHOTOS FOR EVERYONE WITH FRAME FIT)
-    function SharedPhotosStep({ sharedPhotos, onNext }) {
-      const photo1 = sharedPhotos[0] || { url: '', caption: 'Ảnh tập thể 01', fit: 'cover', position: 'center' };
-      const photo2 = sharedPhotos[1] || { url: '', caption: 'Ảnh tập thể 02', fit: 'cover', position: 'center' };
-
-      return (
-        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
-          <div className="text-center space-y-2">
-            <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
-              SHARED MEMORIES
-            </span>
-            <h2 className="font-editorial text-2xl font-bold text-deepPink">
-              GOOD TIMES, GREAT PEOPLE.
-            </h2>
-            <p className="text-xs text-navy font-semibold">Những khoảnh khắc đẹp gắn kết cả tập thể.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-pearl border border-dustyRose p-3 rounded-2xl space-y-2 shadow-sm">
-              <div className="aspect-square w-full rounded-xl overflow-hidden bg-powderBlue flex items-center justify-center">
-                {photo1.url ? (
-                  <img
-                    src={photo1.url}
-                    alt="Group 1"
-                    className="w-full h-full"
-                    style={{ objectFit: photo1.fit || 'cover', objectPosition: photo1.position || 'center' }}
-                  />
-                ) : (
-                  <span className="text-xs font-bold text-deepPink">Group Photo 01</span>
-                )}
-              </div>
-              <p className="text-[11px] font-medium text-navy text-center line-clamp-2">
-                {photo1.caption}
-              </p>
-            </div>
-
-            <div className="bg-pearl border border-dustyRose p-3 rounded-2xl space-y-2 shadow-sm">
-              <div className="aspect-square w-full rounded-xl overflow-hidden bg-powderBlue flex items-center justify-center">
-                {photo2.url ? (
-                  <img
-                    src={photo2.url}
-                    alt="Group 2"
-                    className="w-full h-full"
-                    style={{ objectFit: photo2.fit || 'cover', objectPosition: photo2.position || 'center' }}
-                  />
-                ) : (
-                  <span className="text-xs font-bold text-deepPink">Group Photo 02</span>
-                )}
-              </div>
-              <p className="text-[11px] font-medium text-navy text-center line-clamp-2">
-                {photo2.caption}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={onNext}
-            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
-          >
-            READ YOUR LETTER ✉️
-          </button>
-        </div>
-      );
-    }
-
-    // STEP 7: LETTER STEP WITH DYNAMIC RECIPIENT REPLACEMENT
-    function LetterStep({ activeRecipient, globalLetter, onNext }) {
-      const fullLetter = globalLetter.replace(/\[Recipient Name\]/g, activeRecipient?.fullName || 'Gentleman');
-
-      const [displayedText, setDisplayedText] = useState('');
-      const [isDone, setIsDone] = useState(false);
-
-      useEffect(() => {
-        let idx = 0;
-        const timer = setInterval(() => {
-          if (idx < fullLetter.length) {
-            setDisplayedText(fullLetter.slice(0, idx + 1));
-            idx++;
-          } else {
-            setIsDone(true);
-            clearInterval(timer);
-          }
-        }, 15);
-
-        return () => clearInterval(timer);
-      }, [fullLetter]);
-
-      const handleSkip = () => {
-        setDisplayedText(fullLetter);
-        setIsDone(true);
-      };
-
-      return (
-        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
-          <div className="flex justify-between items-center border-b border-dustyRose pb-4">
-            <h2 className="font-editorial text-xl font-bold text-deepPink">
-              JUST A LITTLE NOTE FOR YOU
-            </h2>
-            {!isDone && (
-              <button
-                onClick={handleSkip}
-                className="text-[11px] font-bold text-deepPink underline hover:opacity-80"
-              >
-                Bỏ qua hiệu ứng ⏩
-              </button>
-            )}
-          </div>
-
-          <div className="bg-pearl border border-dustyRose p-6 rounded-2xl text-xs sm:text-sm font-medium text-navy leading-relaxed whitespace-pre-line shadow-inner max-h-[350px] overflow-y-auto">
-            {displayedText}
-          </div>
-
-          <button
-            onClick={onNext}
-            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
-          >
-            DISCOVER SECRET MESSAGE 🤫
-          </button>
-        </div>
-      );
-    }
-
-    // STEP 8: SECRET MESSAGE (NOW INDIVIDUAL PER RECIPIENT)
-    function SecretMessageStep({ activeRecipient, onNext }) {
-      const message = activeRecipient?.secretMessage || 'Đừng quên rằng phía sau bạn luôn có sự ủng hộ nhiệt tình từ các chị em phong trào. Bất kể khi nào bạn cần sự hỗ trợ hoặc một nguồn năng lượng tích cực, bọn mình luôn ở đây!';
-
-      return (
-        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
-          <span className="text-xs font-bold text-deepPink bg-pearl px-3 py-1 rounded-full border border-dustyRose">
-            SURPRISE NOTE FOR {activeRecipient?.fullName?.toUpperCase()}
-          </span>
-
-          <h2 className="font-editorial text-2xl font-bold text-deepPink">
-            PSST... ONE MORE THING!
-          </h2>
-
-          <div className="p-6 bg-pearl border border-dustyRose rounded-2xl space-y-3 text-xs sm:text-sm leading-relaxed text-navy font-medium shadow-sm">
-            <p className="italic">
-              "{message}"
-            </p>
-          </div>
-
-          <button
-            onClick={onNext}
-            className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition transform active:scale-95"
-          >
-            SEND A THANK YOU 💌
-          </button>
-        </div>
-      );
-    }
-
-    // STEP 9: A LITTLE THANK YOU
-    function ThankYouStep({ activeRecipient, thankYouList, setThankYouList, onNext }) {
-      const [message, setMessage] = useState('');
-      const [isAnonymous, setIsAnonymous] = useState(false);
-      const [sent, setSent] = useState(false);
-
-      const handleSend = (e) => {
-        e.preventDefault();
-        if (!message.trim()) return;
-
-        const newMsg = {
-          id: Date.now(),
-          senderName: isAnonymous ? 'Ẩn danh' : (activeRecipient?.fullName || 'Gentleman'),
-          recipientId: activeRecipient?.id,
-          message: message.trim(),
-          timestamp: new Date().toLocaleString('vi-VN')
-        };
-
-        setThankYouList([newMsg, ...thankYouList]);
-        setSent(true);
-      };
-
-      return (
-        <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card space-y-6">
-          <div className="text-center space-y-2">
-            <h2 className="font-editorial text-2xl font-bold text-deepPink">
-              A LITTLE THANK YOU
-            </h2>
-            <p className="text-xs text-navy font-semibold">BEFORE YOU GO...</p>
-            <p className="text-xs text-navy/80 leading-relaxed">
-              Đằng sau món quà nhỏ này là rất nhiều sự chuẩn bị từ các chị em phong trào. Hãy để lại một lời nhắn nhỏ nhé!
-            </p>
-          </div>
-
-          {!sent ? (
-            <form onSubmit={handleSend} className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-bold text-deepPink uppercase mb-1">Tên người gửi</label>
-                <input
-                  type="text"
-                  disabled
-                  value={isAnonymous ? 'Ẩn danh' : (activeRecipient?.fullName || '')}
-                  className="w-full p-3 rounded-xl bg-pearl border border-dustyRose text-xs font-bold text-navy opacity-80"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-deepPink uppercase mb-1">Lời nhắn gửi</label>
-                <textarea
-                  rows="4"
-                  placeholder="Nhập lời cảm ơn hoặc nhắn gửi..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-pearl border border-dustyRose text-xs font-medium text-navy focus:outline-none focus:border-deepPink"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="anon"
-                  checked={isAnonymous}
-                  onChange={(e) => setIsAnonymous(e.target.checked)}
-                  className="rounded text-deepPink focus:ring-deepPink"
-                />
-                <label htmlFor="anon" className="text-xs text-navy font-medium cursor-pointer">
-                  Gửi dưới dạng ẩn danh
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                disabled={!message.trim()}
-                className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition disabled:opacity-50 transform active:scale-95"
-              >
-                SEND WITH LOVE 💖
-              </button>
-            </form>
-          ) : (
-            <div className="text-center space-y-4 py-4">
-              <span className="text-4xl block">✨</span>
-              <p className="text-xs font-bold text-deepPink">
-                Cảm ơn bạn! Lời nhắn đã được gửi thành công đến các chị em.
-              </p>
-              <button
-                onClick={onNext}
-                className="w-full py-4 rounded-2xl bg-deepPink text-pearl font-bold text-xs tracking-wider shadow-button hover:bg-deepPink/90 transition"
-              >
-                GO TO FINAL CELEBRATION 🎉
-              </button>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // STEP 10: FINAL CELEBRATION & MEMORY CARD PNG EXPORT (1080x1350px FIXED)
-    function FinalCelebrationStep({ activeRecipient, trigger5CriteriaEffect, onRestart }) {
-      const cardRef = useRef(null);
-      const [exporting, setExporting] = useState(false);
-
-      const handleDownloadPNG = () => {
-        if (!cardRef.current) return;
-        setExporting(true);
-
-        window.html2canvas(cardRef.current, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#DCE7F3'
-        }).then(canvas => {
-          const link = document.createElement('a');
-          link.download = `Memory_Card_${normalizeText(activeRecipient?.fullName || 'Gentleman')}.png`;
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-          setExporting(false);
-        }).catch(() => {
-          alert('Có lỗi khi xuất ảnh Memory Card. Vui lòng thử lại!');
-          setExporting(false);
-        });
-      };
-
-      const personalPhoto = activeRecipient?.photos?.[0]?.url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop';
-
-      return (
-        <div className="space-y-6">
-          <div className="bg-blush border-2 border-dustyRose p-8 rounded-3xl shadow-card text-center space-y-6">
-            <h1 className="font-editorial text-2xl sm:text-3xl font-bold text-deepPink">
-              HAPPY INTERNATIONAL MEN'S DAY
-            </h1>
-            <p className="text-xs font-bold text-navy tracking-widest">19 NOVEMBER 2026</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <button
-                onClick={trigger5CriteriaEffect}
-                className="py-3 px-4 rounded-xl bg-pearl border border-dustyRose text-deepPink font-bold text-xs hover:bg-dustyRose/40 transition"
-              >
-                🎆 REPLAY CONFETTI & 5 TIÊU CHÍ
-              </button>
-
-              <button
-                onClick={handleDownloadPNG}
-                disabled={exporting}
-                className="py-3 px-4 rounded-xl bg-deepPink text-pearl font-bold text-xs hover:bg-deepPink/90 transition shadow-sm disabled:opacity-50"
-              >
-                {exporting ? 'DOWNLOADING...' : '📸 DOWNLOAD MEMORY CARD (PNG)'}
-              </button>
-            </div>
-
-            <button
-              onClick={onRestart}
-              className="text-xs font-bold text-navy underline hover:opacity-80"
-            >
-              🔄 BACK TO TOP & RE-ENTER NAME
-            </button>
-          </div>
-
-          {/* OFFSCREEN 1080x1350 MEMORY CARD TARGET */}
-          <div className="overflow-hidden h-0 w-0 pointer-events-none opacity-0">
-            <div
-              ref={cardRef}
-              style={{ width: '1080px', height: '1350px' }}
-              className="bg-powderBlue p-16 flex flex-col justify-between font-sans text-navy relative"
-            >
-              <div className="flex justify-between items-center border-b-2 border-dustyRose pb-8">
-                <div>
-                  <h1 className="font-editorial text-4xl font-bold text-deepPink">THE GENTLEMEN'S ARCHIVE</h1>
-                  <p className="text-lg font-bold text-navy tracking-widest mt-1">INTERNATIONAL MEN'S DAY • 19.11.2026</p>
-                </div>
-                <div className="bg-blush px-6 py-3 rounded-full border border-dustyRose text-deepPink font-bold text-xl">
-                  SPECIAL EDITION
-                </div>
-              </div>
-
-              <div className="flex-1 my-12 flex flex-col items-center justify-center space-y-8 text-center">
-                <div className="w-80 h-80 rounded-3xl overflow-hidden border-4 border-blush shadow-2xl bg-pearl">
-                  <img src={personalPhoto} alt="Memory" className="w-full h-full object-cover" />
-                </div>
-
-                <div>
-                  <h2 className="font-editorial text-5xl font-bold text-deepPink uppercase tracking-wide">
-                    {activeRecipient?.fullName}
-                  </h2>
-                  <p className="text-2xl font-bold text-navy mt-2">
-                    {activeRecipient?.personality || 'THE GOLDEN GENTLEMAN'}
-                  </p>
-                </div>
-
-                <div className="max-w-2xl bg-blush/60 p-8 rounded-3xl border border-dustyRose text-xl leading-relaxed text-navy font-medium">
-                  "Chúc bạn luôn giữ vững phong thái bản lĩnh, gặt hái nhiều thành công và luôn là một mảnh ghép rực rỡ của tập thể!"
-                </div>
-              </div>
-
-              <div className="border-t-2 border-dustyRose pt-8 flex justify-between items-center text-lg font-bold text-navy/70">
-                <span>CHỊ EM PHONG TRÀO</span>
-                <span>SINH VIÊN 5 TỐT • 2026</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // ADMIN HUB WITH ENHANCED TABS & GLOBAL LETTER EDITING (MUSIC SETTINGS REMOVED)
-    function AdminModal({
-      adminAuthed,
-      setAdminAuthed,
-      adminPasswordInput,
-      setAdminPasswordInput,
-      adminPassword,
-      setAdminPassword,
-      onClose,
-      recipients,
-      setRecipients,
-      sharedPhotos,
-      setSharedPhotos,
-      globalLetter,
-      setGlobalLetter,
-      thankYouList,
-      setThankYouList
-    }) {
-      const [adminTab, setAdminTab] = useState('recipients');
-      const [authError, setAuthError] = useState('');
-
-      const handleLogin = (e) => {
-        e.preventDefault();
-        if (adminPasswordInput === adminPassword) {
-          setAdminAuthed(true);
-          setAuthError('');
-        } else {
-          setAuthError('Mật khẩu Admin không chính xác!');
-        }
-      };
-
-      return (
-        <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-pearl border-2 border-dustyRose rounded-3xl max-w-4xl w-full p-4 sm:p-6 space-y-4 shadow-2xl my-4 max-h-[92vh] flex flex-col">
-            <div className="flex justify-between items-center border-b border-dustyRose pb-3 shrink-0">
-              <div>
-                <h2 className="font-editorial text-xl sm:text-2xl font-bold text-deepPink">ADMIN DASHBOARD</h2>
-                <p className="text-[11px] text-navy font-semibold">Quản trị nội dung, ảnh cá nhân & thư chúc mừng</p>
-              </div>
-              <button onClick={onClose} className="p-2 rounded-full bg-blush text-deepPink hover:bg-dustyRose transition">
-                ✕
-              </button>
-            </div>
-
-            {!adminAuthed ? (
-              <form onSubmit={handleLogin} className="max-w-md mx-auto space-y-4 py-8 w-full">
-                <div className="text-center space-y-2">
-                  <span className="text-3xl block">🔒</span>
-                  <h3 className="font-editorial text-xl font-bold text-deepPink">ADMIN AUTHENTICATION</h3>
-                  <p className="text-xs text-navy">Nhập mật khẩu để truy cập quyền quản trị.</p>
-                </div>
-
-                <input
-                  type="password"
-                  placeholder="Mật khẩu (Mặc định: gentlemen2026)"
-                  value={adminPasswordInput}
-                  onChange={(e) => setAdminPasswordInput(e.target.value)}
-                  className="w-full p-3.5 rounded-xl bg-blush border border-dustyRose text-center text-xs font-bold text-navy focus:outline-none"
-                />
-
-                {authError && <p className="text-xs font-bold text-rose-600 text-center">{authError}</p>}
-
-                <button
-                  type="submit"
-                  className="w-full py-3.5 rounded-xl bg-deepPink text-pearl text-xs font-bold shadow-button hover:bg-deepPink/90 transition"
-                >
-                  UNLOCK ADMIN HUB
-                </button>
-              </form>
-            ) : (
-              <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-                {/* Admin Tabs (Music tab removed) */}
-                <div className="flex flex-wrap gap-2 border-b border-dustyRose pb-3 sticky top-0 bg-pearl z-10 pt-1">
-                  <button
-                    onClick={() => setAdminTab('recipients')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'recipients' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
-                  >
-                    1. NGƯỜI NHẬN & LỜI NHẮN
-                  </button>
-
-                  <button
-                    onClick={() => setAdminTab('letter')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'letter' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
-                  >
-                    2. THƯ GỬI CHUNG
-                  </button>
-
-                  <button
-                    onClick={() => setAdminTab('sharedPhotos')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'sharedPhotos' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
-                  >
-                    3. SHARED GROUP PHOTOS
-                  </button>
-
-                  <button
-                    onClick={() => setAdminTab('thankYous')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${adminTab === 'thankYous' ? 'bg-deepPink text-pearl' : 'bg-blush text-navy hover:bg-dustyRose/50'}`}
-                  >
-                    4. THANK YOU INBOX ({thankYouList.length})
-                  </button>
-                </div>
-
-                {adminTab === 'recipients' && (
-                  <AdminRecipientManagement
-                    recipients={recipients}
-                    setRecipients={setRecipients}
-                  />
-                )}
-
-                {adminTab === 'letter' && (
-                  <AdminLetterManagement
-                    globalLetter={globalLetter}
-                    setGlobalLetter={setGlobalLetter}
-                  />
-                )}
-
-                {adminTab === 'sharedPhotos' && (
-                  <AdminSharedPhotosManagement
-                    sharedPhotos={sharedPhotos}
-                    setSharedPhotos={setSharedPhotos}
-                  />
-                )}
-
-                {adminTab === 'thankYous' && (
-                  <div className="space-y-4">
-                    <h3 className="font-editorial text-lg font-bold text-deepPink">THANK YOU MESSAGES INBOX</h3>
-                    {thankYouList.length === 0 ? (
-                      <p className="text-xs text-navy/70 italic">Chưa có lời nhắn nào được gửi.</p>
-                    ) : (
-                      <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                        {thankYouList.map(item => (
-                          <div key={item.id} className="p-4 rounded-xl bg-blush border border-dustyRose space-y-1 text-xs">
-                            <div className="flex justify-between font-bold text-deepPink">
-                              <span>From: {item.senderName}</span>
-                              <span className="text-[10px] text-navy/60">{item.timestamp}</span>
-                            </div>
-                            <p className="text-navy font-medium">{item.message}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // INDIVIDUAL RECIPIENT INFO, SECRET MESSAGE & PHOTO FIT MANAGEMENT
-    function AdminRecipientManagement({ recipients, setRecipients }) {
-      const [selectedRecId, setSelectedRecId] = useState(recipients[0]?.id || null);
-      const [editingRecipient, setEditingRecipient] = useState(null);
-      const [isDetailsExpanded, setIsDetailsExpanded] = useState(true);
-
-      useEffect(() => {
-        const found = recipients.find(r => r.id === selectedRecId);
-        if (found) {
-          setEditingRecipient(JSON.parse(JSON.stringify(found)));
-        }
-      }, [selectedRecId, recipients]);
-
-      if (!editingRecipient) return null;
-
-      const handlePhotoUpload = (index, file) => {
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const dataUrl = e.target.result;
-          const updatedPhotos = [...(editingRecipient.photos || [])];
-          if (!updatedPhotos[index]) {
-            updatedPhotos[index] = { url: '', caption: '', fit: 'cover', position: 'center' };
-          }
-          updatedPhotos[index].url = dataUrl;
-          setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
-        };
-        reader.readAsDataURL(file);
-      };
-
-      const handleCaptionChange = (index, caption) => {
-        const updatedPhotos = [...(editingRecipient.photos || [])];
-        if (!updatedPhotos[index]) {
-          updatedPhotos[index] = { url: '', caption: '', fit: 'cover', position: 'center' };
-        }
-        updatedPhotos[index].caption = caption;
-        setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
-      };
-
-      const handlePhotoFitChange = (index, fit) => {
-        const updatedPhotos = [...(editingRecipient.photos || [])];
-        if (!updatedPhotos[index]) updatedPhotos[index] = { url: '', caption: '' };
-        updatedPhotos[index].fit = fit;
-        setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
-      };
-
-      const handlePhotoPositionChange = (index, position) => {
-        const updatedPhotos = [...(editingRecipient.photos || [])];
-        if (!updatedPhotos[index]) updatedPhotos[index] = { url: '', caption: '' };
-        updatedPhotos[index].position = position;
-        setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
-      };
-
-      const handleRemovePhoto = (index) => {
-        const updatedPhotos = [...(editingRecipient.photos || [])];
-        if (updatedPhotos[index]) {
-          updatedPhotos[index].url = '';
-        }
-        setEditingRecipient({ ...editingRecipient, photos: updatedPhotos });
-      };
-
-      const handleSaveRecipient = () => {
-        const nextRecipients = recipients.map(r => r.id === editingRecipient.id ? editingRecipient : r);
-        setRecipients(nextRecipients);
-        alert(`Đã lưu toàn bộ thông tin, lời nhắn riêng và ảnh cá nhân cho ${editingRecipient.fullName}!`);
-      };
-
-      return (
-        <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm space-y-3">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <span className="font-editorial text-sm font-bold text-deepPink uppercase tracking-wider">
-                CHỌN NGƯỜI NHẬN ĐỂ CHỈNH SỬA
-              </span>
-              <select
-                value={selectedRecId}
-                onChange={(e) => setSelectedRecId(e.target.value)}
-                className="w-full sm:w-auto p-2.5 rounded-xl border border-dustyRose bg-pearl text-deepPink font-bold text-xs focus:outline-none"
-              >
-                {recipients.map(r => (
-                  <option key={r.id} value={r.id}>
-                    {r.fullName} ({r.group || 'GENTLEMAN'})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-5 rounded-2xl bg-blush border border-dustyRose shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-dustyRose/80 pb-2">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-                  className="text-xs font-bold text-deepPink hover:opacity-80 flex items-center gap-1 bg-pearl px-2.5 py-1 rounded-lg border border-dustyRose"
-                >
-                  {isDetailsExpanded ? '▼ THU GỌN THÔNG TIN' : '▶ HIỂN THỊ CHI TIẾT NGƯỜI NHẬN'}
-                </button>
-              </div>
-
-              <button
-                onClick={handleSaveRecipient}
-                className="px-4 py-2 rounded-xl bg-deepPink text-pearl text-xs font-bold shadow-md hover:bg-deepPink/90 transition"
-              >
-                💾 LƯU THAY ĐỔI
-              </button>
-            </div>
-
-            {isDetailsExpanded && (
-              <div className="space-y-4 pt-1">
-                <div className="p-3.5 rounded-xl bg-pearl border border-dustyRose space-y-3">
-                  <h4 className="text-xs font-bold text-deepPink uppercase">1. THÔNG TIN HIỂN THỊ HỒ SƠ</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold text-navy uppercase mb-1">Họ và tên người nhận</label>
-                      <input
-                        type="text"
-                        value={editingRecipient.fullName || ''}
-                        onChange={(e) => setEditingRecipient({ ...editingRecipient, fullName: e.target.value })}
-                        className="w-full p-2 rounded-lg border border-dustyRose text-xs font-semibold text-navy bg-blush/20 focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-navy uppercase mb-1">Lớp / Nhóm phân biệt</label>
-                      <input
-                        type="text"
-                        value={editingRecipient.group || ''}
-                        onChange={(e) => setEditingRecipient({ ...editingRecipient, group: e.target.value })}
-                        className="w-full p-2 rounded-lg border border-dustyRose text-xs font-semibold text-navy bg-blush/20 focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-navy uppercase mb-1">Kết quả tính cách (Archetype)</label>
-                      <input
-                        type="text"
-                        value={editingRecipient.personality || ''}
-                        onChange={(e) => setEditingRecipient({ ...editingRecipient, personality: e.target.value })}
-                        className="w-full p-2 rounded-lg border border-dustyRose text-xs font-semibold text-navy bg-blush/20 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-pearl border border-dustyRose space-y-2">
-                  <h4 className="text-xs font-bold text-deepPink uppercase">2. LỜI NHẮN BÍ MẬT RIÊNG CHO NGƯỜI NÀY</h4>
-                  <textarea
-                    rows="3"
-                    value={editingRecipient.secretMessage || ''}
-                    onChange={(e) => setEditingRecipient({ ...editingRecipient, secretMessage: e.target.value })}
-                    placeholder="Nhập lời nhắn bí mật cá nhân hóa..."
-                    className="w-full p-2.5 rounded-lg border border-dustyRose text-xs text-navy font-medium bg-blush/10 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-deepPink uppercase">3. QUẢN LÝ & CĂN CHỈNH KHUNG HÌNH 2 ẢNH CÁ NHÂN</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {[0, 1].map((idx) => {
-                      const photo = (editingRecipient.photos && editingRecipient.photos[idx]) || { url: '', caption: '', fit: 'cover', position: 'center' };
-                      return (
-                        <div key={idx} className="p-3 rounded-xl bg-pearl border border-dustyRose space-y-2">
-                          <div className="flex justify-between items-center text-[11px] font-bold text-deepPink">
-                            <span>ẢNH CÁ NHÂN 0{idx + 1}</span>
-                            <span className="text-[10px] text-navy font-mono">ID: {editingRecipient.id}</span>
-                          </div>
-
-                          <div className="w-full aspect-square rounded-lg overflow-hidden border border-dustyRose bg-blush/40 flex items-center justify-center relative">
-                            {photo.url ? (
-                              <img
-                                src={photo.url}
-                                alt={`Personal ${idx + 1}`}
-                                className="w-full h-full"
-                                style={{ objectFit: photo.fit || 'cover', objectPosition: photo.position || 'center' }}
-                              />
-                            ) : (
-                              <div className="text-center p-2">
-                                <span className="text-xl block mb-1">🖼️</span>
-                                <span className="text-[10px] font-bold text-deepPink/70">Chưa có ảnh</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold text-deepPink uppercase mb-1">Chú thích ảnh 0{idx + 1}</label>
-                            <input
-                              type="text"
-                              placeholder="Nhập chú thích..."
-                              value={photo.caption || ''}
-                              onChange={(e) => handleCaptionChange(idx, e.target.value)}
-                              className="w-full p-2 rounded-lg border border-dustyRose text-xs text-deepPink font-semibold bg-blush/30 focus:outline-none"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
-                            <div>
-                              <label className="block text-navy mb-1">Chế độ khung ảnh</label>
-                              <select
-                                value={photo.fit || 'cover'}
-                                onChange={(e) => handlePhotoFitChange(idx, e.target.value)}
-                                className="w-full p-1.5 rounded-md border border-dustyRose bg-blush/20 text-navy"
-                              >
-                                <option value="cover">Cover (Lấp đầy khung)</option>
-                                <option value="contain">Contain (Trọn vẹn ảnh)</option>
-                                <option value="fill">Fill (Co giãn)</option>
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="block text-navy mb-1">Căn vị trí ảnh</label>
-                              <select
-                                value={photo.position || 'center'}
-                                onChange={(e) => handlePhotoPositionChange(idx, e.target.value)}
-                                className="w-full p-1.5 rounded-md border border-dustyRose bg-blush/20 text-navy"
-                              >
-                                <option value="center">Giữa (Center)</option>
-                                <option value="top">Trên (Top)</option>
-                                <option value="bottom">Dưới (Bottom)</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2 text-xs font-bold pt-1">
-                            <label className="flex-1 py-1.5 px-2 rounded-lg bg-deepPink text-pearl text-center cursor-pointer hover:bg-deepPink/90 transition text-[11px]">
-                              <span>{photo.url ? 'Thay ảnh' : 'Tải ảnh lên'}</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => handlePhotoUpload(idx, e.target.files[0])}
-                              />
-                            </label>
-                            {photo.url && (
-                              <button
-                                onClick={() => handleRemovePhoto(idx)}
-                                className="py-1.5 px-3 rounded-lg bg-rose-600 text-white text-center hover:bg-rose-700 transition text-[11px]"
-                              >
-                                Xóa
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // GLOBAL LETTER MANAGEMENT COMPONENT
-    function AdminLetterManagement({ globalLetter, setGlobalLetter }) {
-      const [inputLetter, setInputLetter] = useState(globalLetter);
-
-      const handleSaveLetter = () => {
-        if (!inputLetter.trim()) return;
-        setGlobalLetter(inputLetter);
-        alert('Đã lưu nội dung Thư gửi chung mới thành công!');
-      };
-
-      return (
-        <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-              <h3 className="font-editorial text-base font-bold text-deepPink">QUẢN LÝ THƯ CHÚC MỪNG CHUNG</h3>
-              <p className="text-xs text-navy font-semibold">Nội dung thư chính gửi đến tất cả các anh em. Sử dụng [Recipient Name] để tự động điền tên.</p>
-            </div>
-            <button
-              onClick={handleSaveLetter}
-              className="px-4 py-2 rounded-xl bg-deepPink text-pearl font-bold text-xs shadow-md hover:bg-deepPink/90 transition shrink-0"
-            >
-              💾 LƯU THƯ CHUNG
-            </button>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-pearl border border-dustyRose shadow-sm space-y-3">
-            <label className="block text-xs font-bold text-deepPink uppercase">NỘI DUNG THƯ CHÚC MỪNG</label>
-            <textarea
-              rows="12"
-              value={inputLetter}
-              onChange={(e) => setInputLetter(e.target.value)}
-              className="w-full p-4 rounded-xl border border-dustyRose text-xs sm:text-sm font-medium text-navy leading-relaxed bg-blush/10 focus:outline-none focus:border-deepPink font-sans"
-            />
-          </div>
-        </div>
-      );
-    }
-
-    // SHARED GROUP PHOTOS MANAGEMENT COMPONENT WITH FRAME FIT
-    function AdminSharedPhotosManagement({ sharedPhotos, setSharedPhotos }) {
-      const handleUploadGroup = (idx, file) => {
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const updated = [...sharedPhotos];
-          if (!updated[idx]) updated[idx] = { url: '', caption: '', fit: 'cover', position: 'center' };
-          updated[idx].url = e.target.result;
-          setSharedPhotos(updated);
-        };
-        reader.readAsDataURL(file);
-      };
-
-      const handleCaptionGroup = (idx, caption) => {
-        const updated = [...sharedPhotos];
-        if (!updated[idx]) updated[idx] = { url: '', caption: '', fit: 'cover', position: 'center' };
-        updated[idx].caption = caption;
-        setSharedPhotos(updated);
-      };
-
-      const handleFitGroup = (idx, fit) => {
-        const updated = [...sharedPhotos];
-        if (!updated[idx]) updated[idx] = { url: '', caption: '' };
-        updated[idx].fit = fit;
-        setSharedPhotos(updated);
-      };
-
-      return (
-        <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-blush border border-dustyRose shadow-sm space-y-2">
-            <h3 className="font-editorial text-base font-bold text-deepPink">SHARED GROUP PHOTOS MANAGEMENT</h3>
-            <p className="text-xs text-navy">2 bức ảnh tập thể dùng chung hiển thị cho TOÀN BỘ người nhận trên website.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[0, 1].map((idx) => {
-              const photo = sharedPhotos[idx] || { url: '', caption: '', fit: 'cover', position: 'center' };
-              return (
-                <div key={idx} className="p-3 rounded-xl bg-pearl border border-dustyRose space-y-3">
-                  <div className="text-xs font-bold text-deepPink">SHARED GROUP PHOTO 0{idx + 1}</div>
-                  <div className="w-full aspect-video rounded-lg overflow-hidden border border-dustyRose bg-blush/40 flex items-center justify-center">
-                    {photo.url ? (
-                      <img
-                        src={photo.url}
-                        alt={`Group ${idx + 1}`}
-                        className="w-full h-full"
-                        style={{ objectFit: photo.fit || 'cover', objectPosition: photo.position || 'center' }}
-                      />
-                    ) : (
-                      <span className="text-xs font-bold text-deepPink/70">Chưa có ảnh</span>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Chú thích ảnh tập thể..."
-                    value={photo.caption || ''}
-                    onChange={(e) => handleCaptionGroup(idx, e.target.value)}
-                    className="w-full p-2 rounded-lg border border-dustyRose text-xs text-deepPink font-semibold bg-blush/30 focus:outline-none"
-                  />
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-navy">
-                    <span>Chế độ hiển thị:</span>
-                    <select
-                      value={photo.fit || 'cover'}
-                      onChange={(e) => handleFitGroup(idx, e.target.value)}
-                      className="p-1 rounded border border-dustyRose bg-blush/20"
-                    >
-                      <option value="cover">Cover (Lấp đầy)</option>
-                      <option value="contain">Contain (Trọn vẹn)</option>
-                    </select>
-                  </div>
-                  <label className="block w-full py-2 px-3 rounded-lg bg-deepPink text-pearl text-center text-xs font-bold cursor-pointer hover:bg-deepPink/90 transition">
-                    Tải ảnh tập thể lên
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleUploadGroup(idx, e.target.files[0])}
-                    />
-                  </label>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    }
-
-    // Mount React App
+    // Render App
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
