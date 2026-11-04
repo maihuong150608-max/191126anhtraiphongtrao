@@ -196,11 +196,11 @@
         id: 'rec_04',
         fullName: 'Đồng Hoàng Dũng',
         group: 'GENTLEMAN',
-        personality: 'MARTIN PHONG TRÀO',
+        personality: 'THE CHAOS MANAGER',
         secretMessage: 'Chúc Hoàng Dũng luôn giữ vững nguồn năng lượng tích cực và điều hành mọi việc cực mượt!',
         photos: [
-          { url: 'img1.jpg', caption: 'Hoàng Dũng với tinh thần tích cực', fit: 'cover', position: 'center' },
-          { url: 'img2.jpg', caption: 'Kỷ niệm đẹp cùng tập thể', fit: 'cover', position: 'center' }
+          { url: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=500&auto=format&fit=crop', caption: 'Hoàng Dũng với tinh thần tích cực', fit: 'cover', position: 'center' },
+          { url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500&auto=format&fit=crop', caption: 'Kỷ niệm đẹp cùng tập thể', fit: 'cover', position: 'center' }
         ]
       },
       {
@@ -228,8 +228,8 @@
     ];
 
     const DEFAULT_SHARED_PHOTOS = [
-      { url: 'tapthe1.jpg', caption: 'Kỷ niệm tập thể đáng nhớ ngày 19/11', fit: 'cover', position: 'center' },
-      { url: 'tapthe2.jpg', caption: 'Đồng hành và gắn kết cùng Chị Em Phong Trào', fit: 'cover', position: 'center' }
+      { url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop', caption: 'Kỷ niệm tập thể đáng nhớ ngày 19/11', fit: 'cover', position: 'center' },
+      { url: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&auto=format&fit=crop', caption: 'Đồng hành và gắn kết cùng Chị Em Phong Trào', fit: 'cover', position: 'center' }
     ];
 
     const DEFAULT_GLOBAL_LETTER = `Dear [Recipient Name],
@@ -530,7 +530,32 @@ CHỊ EM PHONG TRÀO.`;
     }
 
     function LetterStep({ activeRecipient, globalLetter, onNext }) {
-      const letterContent = globalLetter.replace(/\[Recipient Name\]/g, activeRecipient?.fullName || 'bạn');
+      const fullText = globalLetter.replace(/\[Recipient Name\]/g, activeRecipient?.fullName || 'bạn');
+      const [displayedText, setDisplayedText] = useState('');
+      const [isTypingComplete, setIsTypingComplete] = useState(false);
+
+      useEffect(() => {
+        let index = 0;
+        setDisplayedText('');
+        setIsTypingComplete(false);
+
+        const timer = setInterval(() => {
+          if (index < fullText.length) {
+            setDisplayedText((prev) => prev + fullText.charAt(index));
+            index++;
+          } else {
+            setIsTypingComplete(true);
+            clearInterval(timer);
+          }
+        }, 20);
+
+        return () => clearInterval(timer);
+      }, [fullText]);
+
+      const handleSkipTyping = () => {
+        setDisplayedText(fullText);
+        setIsTypingComplete(true);
+      };
 
       return (
         <div className="bg-pearl p-6 sm:p-8 rounded-3xl shadow-card border border-dustyRose/40 text-left animate-fadeIn">
@@ -541,10 +566,19 @@ CHỊ EM PHONG TRÀO.`;
             <h2 className="font-editorial text-xl sm:text-2xl font-bold text-navy">
               Thư Gửi Từ Chị Em Phong Trào
             </h2>
+            {!isTypingComplete && (
+              <p className="text-[11px] text-softGrey mt-1 cursor-pointer underline" onClick={handleSkipTyping}>
+                (Chạm để hiển thị toàn bộ ngay lập tức)
+              </p>
+            )}
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-dustyRose/60 shadow-inner font-sans text-xs sm:text-sm leading-relaxed text-navy whitespace-pre-line mb-6">
-            {letterContent}
+          <div 
+            onClick={handleSkipTyping}
+            className="bg-white p-6 rounded-2xl border border-dustyRose/60 shadow-inner font-sans text-xs sm:text-sm leading-relaxed text-navy whitespace-pre-line mb-6 cursor-pointer min-h-[200px]"
+          >
+            {displayedText}
+            {!isTypingComplete && <span className="animate-pulse font-bold text-deepPink">|</span>}
           </div>
 
           <button
@@ -860,30 +894,63 @@ CHỊ EM PHONG TRÀO.`;
                             </label>
                           </div>
                           
-                          <div className="space-y-2 max-h-48 overflow-y-auto p-2 bg-white rounded-xl border border-dustyRose">
+                          <div className="space-y-3 max-h-56 overflow-y-auto p-2 bg-white rounded-xl border border-dustyRose">
                             {(editingRec.photos || []).map((p, pIdx) => (
-                              <div key={pIdx} className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                                <img src={p.url} className="w-10 h-10 object-cover rounded-lg shrink-0" />
-                                <input 
-                                  type="text" 
-                                  value={p.caption} 
-                                  onChange={(e) => {
-                                    const copy = [...editingRec.photos];
-                                    copy[pIdx].caption = e.target.value;
-                                    setEditingRec({ ...editingRec, photos: copy });
-                                  }}
-                                  placeholder="Chú thích ảnh..." 
-                                  className="flex-1 p-1.5 border rounded-md text-[11px]"
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const copy = editingRec.photos.filter((_, i) => i !== pIdx);
-                                    setEditingRec({ ...editingRec, photos: copy });
-                                  }}
-                                  className="px-2 py-1 bg-red-100 text-red-600 rounded-md text-[10px] font-bold"
-                                >
-                                  Xóa
-                                </button>
+                              <div key={pIdx} className="space-y-2 border-b border-slate-100 pb-3">
+                                <div className="flex items-center gap-2">
+                                  <img src={p.url} className="w-10 h-10 object-cover rounded-lg shrink-0" />
+                                  <input 
+                                    type="text" 
+                                    value={p.caption} 
+                                    onChange={(e) => {
+                                      const copy = [...editingRec.photos];
+                                      copy[pIdx].caption = e.target.value;
+                                      setEditingRec({ ...editingRec, photos: copy });
+                                    }}
+                                    placeholder="Chú thích ảnh..." 
+                                    className="flex-1 p-1.5 border rounded-md text-[11px]"
+                                  />
+                                  <button 
+                                    onClick={() => {
+                                      const copy = editingRec.photos.filter((_, i) => i !== pIdx);
+                                      setEditingRec({ ...editingRec, photos: copy });
+                                    }}
+                                    className="px-2 py-1 bg-red-100 text-red-600 rounded-md text-[10px] font-bold"
+                                  >
+                                    Xóa
+                                  </button>
+                                </div>
+                                <div className="flex gap-2 text-[10px] items-center bg-slate-50 p-1.5 rounded-lg">
+                                  <label className="font-semibold text-softGrey">Hiển thị:</label>
+                                  <select 
+                                    value={p.fit || 'cover'} 
+                                    onChange={(e) => {
+                                      const copy = [...editingRec.photos];
+                                      copy[pIdx].fit = e.target.value;
+                                      setEditingRec({ ...editingRec, photos: copy });
+                                    }}
+                                    className="p-1 border rounded bg-white text-navy"
+                                  >
+                                    <option value="cover">Cắt vừa khung (Cover)</option>
+                                    <option value="contain">Vừa vặn (Contain)</option>
+                                    <option value="fill">Kéo giãn (Fill)</option>
+                                  </select>
+
+                                  <label className="font-semibold text-softGrey ml-1">Vị trí:</label>
+                                  <select 
+                                    value={p.position || 'center'} 
+                                    onChange={(e) => {
+                                      const copy = [...editingRec.photos];
+                                      copy[pIdx].position = e.target.value;
+                                      setEditingRec({ ...editingRec, photos: copy });
+                                    }}
+                                    className="p-1 border rounded bg-white text-navy"
+                                  >
+                                    <option value="center">Giữa</option>
+                                    <option value="top">Trên</option>
+                                    <option value="bottom">Dưới</option>
+                                  </select>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -935,27 +1002,60 @@ CHỊ EM PHONG TRÀO.`;
 
                     <div className="space-y-3 max-h-[350px] overflow-y-auto">
                       {sharedPhotos.map((p, idx) => (
-                        <div key={idx} className="p-3 bg-white rounded-xl border border-dustyRose flex gap-3 items-center">
-                          <img src={p.url} className="w-12 h-12 rounded-lg object-cover shrink-0" />
-                          <div className="flex-1 space-y-1">
-                            <input 
-                              type="text" 
-                              value={p.caption} 
+                        <div key={idx} className="p-3 bg-white rounded-xl border border-dustyRose space-y-2">
+                          <div className="flex gap-3 items-center">
+                            <img src={p.url} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                            <div className="flex-1 space-y-1">
+                              <input 
+                                type="text" 
+                                value={p.caption} 
+                                onChange={(e) => {
+                                  const copy = [...sharedPhotos];
+                                  copy[idx].caption = e.target.value;
+                                  setSharedPhotos(copy);
+                                }}
+                                placeholder="Chú thích ảnh tập thể..."
+                                className="w-full p-1.5 border rounded-lg text-xs"
+                              />
+                            </div>
+                            <button 
+                              onClick={() => setSharedPhotos(sharedPhotos.filter((_, i) => i !== idx))}
+                              className="px-2.5 py-1.5 bg-red-100 text-red-600 font-bold rounded-lg text-xs"
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                          <div className="flex gap-2 text-[10px] items-center bg-slate-50 p-1.5 rounded-lg">
+                            <label className="font-semibold text-softGrey">Hiển thị:</label>
+                            <select 
+                              value={p.fit || 'cover'} 
                               onChange={(e) => {
                                 const copy = [...sharedPhotos];
-                                copy[idx].caption = e.target.value;
+                                copy[idx].fit = e.target.value;
                                 setSharedPhotos(copy);
                               }}
-                              placeholder="Chú thích ảnh tập thể..."
-                              className="w-full p-1.5 border rounded-lg text-xs"
-                            />
+                              className="p-1 border rounded bg-white text-navy"
+                            >
+                              <option value="cover">Cắt vừa khung (Cover)</option>
+                              <option value="contain">Vừa vặn (Contain)</option>
+                              <option value="fill">Kéo giãn (Fill)</option>
+                            </select>
+
+                            <label className="font-semibold text-softGrey ml-1">Vị trí:</label>
+                            <select 
+                              value={p.position || 'center'} 
+                              onChange={(e) => {
+                                const copy = [...sharedPhotos];
+                                copy[idx].position = e.target.value;
+                                setSharedPhotos(copy);
+                              }}
+                              className="p-1 border rounded bg-white text-navy"
+                            >
+                              <option value="center">Giữa</option>
+                              <option value="top">Trên</option>
+                              <option value="bottom">Dưới</option>
+                            </select>
                           </div>
-                          <button 
-                            onClick={() => setSharedPhotos(sharedPhotos.filter((_, i) => i !== idx))}
-                            className="px-2.5 py-1.5 bg-red-100 text-red-600 font-bold rounded-lg text-xs"
-                          >
-                            Xóa
-                          </button>
                         </div>
                       ))}
                     </div>
