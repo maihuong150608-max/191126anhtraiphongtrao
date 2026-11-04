@@ -259,77 +259,93 @@ CHỊ EM PHONG TRÀO.`;
         return localStorage.getItem('ga_global_letter') || DEFAULT_GLOBAL_LETTER;
       });
 
-      // Valid embedded audio Base64 track
-      const defaultAudioSource = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTUFQAAAAPAAADTG9maSBTdHVkaW8AAB5TVE5DAAAADwAAA0xvZmkgU3R1ZGlvAAAA//uQZAAAAAAAGAkAAAC1wAMgAAA1wAMgAAAAAABkGQAAC1wAAgAAA1wAAgAAAAABkZAAAC1wAAIAAA1wAAIAAAAAABlJAAAC1wAABAAA1wAABAAAAAABmIAAC1wAABgAA1wAABgAAAAABmZAAAC1wAACAAA1wAACAAAAAABmpgAAC1wAACQAA1wAACQAAAAABm5AAAC1wAACgAA1wAACgAAAAABnJAAAC1wAAsAAA1wAAsAAAAAABvZAAAC1wAALQAA1wAALQAAAA==';
+      // 🎵 DÁN CHUỖI BASE64 CỦA FILE NHẠC TỪ MÁY BẠN VÀO GIỮA CẶP DẤU NHÁY ĐƠN '' Ở DƯỚI ĐÂY:
+      // Ví dụ: const defaultAudioSource = 'data:audio/mp3;base64,SUQzBAAAAAAAI1TS...';
+      const defaultAudioSource = '';
 
       const [activeRecipient, setActiveRecipient] = useState(null);
       const [nameInput, setNameInput] = useState('');
       const [duplicateMatches, setDuplicateMatches] = useState([]);
       const [errorMessage, setErrorMessage] = useState('');
 
-      // Audio Player state
+      // Audio Player state & Web Audio Fallback Synth
       const [isPlaying, setIsPlaying] = useState(false);
       const audioRef = useRef(null);
+      const audioCtxRef = useRef(null);
+      const synthIntervalRef = useRef(null);
+
+      // Web Audio API synth generator as foolproof fallback if media file is empty
+      const playSynthMelody = () => {
+        try {
+          if (!audioCtxRef.current) {
+            audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          if (audioCtxRef.current.state === 'suspended') {
+            audioCtxRef.current.resume();
+          }
+
+          const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23];
+          let noteIdx = 0;
+
+          if (synthIntervalRef.current) clearInterval(synthIntervalRef.current);
+
+          synthIntervalRef.current = setInterval(() => {
+            if (!audioCtxRef.current || audioCtxRef.current.state !== 'running') return;
+            const osc = audioCtxRef.current.createOscillator();
+            const gain = audioCtxRef.current.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(notes[noteIdx % notes.length], audioCtxRef.current.currentTime);
+            gain.gain.setValueAtTime(0.05, audioCtxRef.current.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtxRef.current.currentTime + 0.8);
+            osc.connect(gain);
+            gain.connect(audioCtxRef.current.destination);
+            osc.start();
+            osc.stop(audioCtxRef.current.currentTime + 0.8);
+            noteIdx++;
+          }, 600);
+        } catch (e) {
+          console.warn("Synth fallback error:", e);
+        }
+      };
+
+      const stopSynthMelody = () => {
+        if (synthIntervalRef.current) {
+          clearInterval(synthIntervalRef.current);
+          synthIntervalRef.current = null;
+        }
+        if (audioCtxRef.current && audioCtxRef.current.state === 'running') {
+          audioCtxRef.current.suspend();
+        }
+      };
 
       // Robust toggle music function
       const toggleMusic = () => {
         const audio = audioRef.current;
-        if (!audio) return;
+        const nextState = !isPlaying;
 
-        if (audio.paused) {
-          audio.play().then(() => {
-            setIsPlaying(true);
-          }).catch(err => {
-            console.warn("Audio play prevented:", err);
-            setIsPlaying(false);
-          });
+        if (nextState) {
+          setIsPlaying(true);
+          if (audio && defaultAudioSource.trim()) {
+            audio.play().catch(err => {
+              console.warn("Audio file play blocked, switching to Web Audio synth fallback:", err);
+              playSynthMelody();
+            });
+          } else {
+            playSynthMelody();
+          }
         } else {
-          audio.pause();
           setIsPlaying(false);
+          if (audio) {
+            audio.pause();
+          }
+          stopSynthMelody();
         }
       };
 
-      // Ensure audio play state updates correctly when audio pauses or plays
+      // Clean up synth on unmount
       useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio) return;
-
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
-
-        audio.addEventListener('play', handlePlay);
-        audio.addEventListener('pause', handlePause);
-
-        return () => {
-          audio.removeEventListener('play', handlePlay);
-          audio.removeEventListener('pause', handlePause);
-        };
+        return () => stopSynthMelody();
       }, []);
-
-      // Unlock audio on initial user gesture anywhere on document
-      useEffect(() => {
-        const handleUserGesture = () => {
-          const audio = audioRef.current;
-          if (audio && audio.paused && !isPlaying) {
-            audio.play().then(() => {
-              setIsPlaying(true);
-            }).catch(() => {});
-          }
-          window.removeEventListener('click', handleUserGesture);
-          window.removeEventListener('touchstart', handleUserGesture);
-          window.removeEventListener('keydown', handleUserGesture);
-        };
-
-        window.addEventListener('click', handleUserGesture);
-        window.addEventListener('touchstart', handleUserGesture);
-        window.addEventListener('keydown', handleUserGesture);
-
-        return () => {
-          window.removeEventListener('click', handleUserGesture);
-          window.removeEventListener('touchstart', handleUserGesture);
-          window.removeEventListener('keydown', handleUserGesture);
-        };
-      }, [isPlaying]);
 
       // Floating Icons state
       const [floatingIcons, setFloatingIcons] = useState([]);
